@@ -91,6 +91,107 @@ export const hackathonRouter = createTRPCRouter({
   }),
 
   //------
+  // Get recent hackathons for public landing page (sorted by most recent) =>
+  getRecentHackathons: publicProcedure.query(async ({ ctx }) => {
+    const hackathons = await ctx.prisma.hackathon.findMany({
+      where: {
+        verified: true,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        url: true,
+        is_finished: true,
+        updatedAt: true,
+      },
+    });
+
+    return hackathons;
+  }),
+
+  //------
+  // Get hackathon with top 3 winners (public) =>
+  getHackathonWithWinners: publicProcedure
+    .input(z.object({ url: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const hackathon = await ctx.prisma.hackathon.findUnique({
+        where: {
+          url: input.url,
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          rules: true,
+          criteria: true,
+          url: true,
+          is_finished: true,
+          updatedAt: true,
+          min_judges_required: true,
+        },
+      });
+
+      if (!hackathon) {
+        return {
+          hackathon: null,
+          winners: [],
+        };
+      }
+
+      // Get all participations with their scores
+      const participations = await ctx.prisma.participation.findMany({
+        where: {
+          hackathon_url: input.url,
+        },
+        include: {
+          scores: true,
+        },
+      });
+
+      // Calculate rankings and get top 3
+      const ranked = participations
+        .map((participation) => {
+          const scores = participation.scores;
+          const totalScores = scores.length;
+          const averageScore = totalScores > 0
+            ? scores.reduce((sum, s) => sum + s.score, 0) / totalScores
+            : 0;
+
+          return {
+            id: participation.id,
+            title: participation.title,
+            description: participation.description,
+            project_url: participation.project_url,
+            creatorName: participation.creatorName,
+            averageScore,
+            totalScores,
+            isEligibleForRanking: totalScores >= hackathon.min_judges_required,
+          };
+        })
+        .filter(p => p.isEligibleForRanking)
+        .sort((a, b) => {
+          if (b.averageScore !== a.averageScore) {
+            return b.averageScore - a.averageScore;
+          }
+          return b.totalScores - a.totalScores;
+        })
+        .slice(0, 3)
+        .map((submission, index) => ({
+          ...submission,
+          rank: index + 1,
+        }));
+
+      return {
+        hackathon,
+        winners: ranked,
+      };
+    }),
+
+  //------
   // Create new hackathon (ADMIN/ORGANIZER only) =>
   createHackathon: organizerProcedure
     .input(newHackathonSchema)
