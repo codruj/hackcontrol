@@ -30,6 +30,7 @@ export interface ParticipationWithScores {
   project_url: string;
   creatorName: string;
   createdAt: Date;
+  team_members?: any;
   scores: Array<{
     id: string;
     score: number;
