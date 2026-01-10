@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import { api } from "@/trpc/api";
 import type { Hackathon } from "@prisma/client";
 import { useSession } from "next-auth/react";
@@ -19,6 +20,8 @@ const Dashboard = () => {
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
   const { data, isLoading, error } = api.hackathon.allHackathons.useQuery();
+  const { data: recentHackathons, isLoading: isLoadingRecent } =
+    api.hackathon.getRecentHackathons.useQuery();
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -250,6 +253,49 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+        {/* Recent Hackathons Section */}
+        <h1 className="mb-4 mt-8 text-2xl font-medium">Recent Hackathons</h1>
+        <div className="container mx-auto">
+          {isLoadingRecent ? (
+            <p className="text-gray-400">Loading recent hackathons...</p>
+          ) : recentHackathons && recentHackathons.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {recentHackathons.map((hackathon) => (
+                <Link
+                  key={hackathon.id}
+                  href={`/hackathon/${hackathon.url}`}
+                  className="block"
+                >
+                  <div className="group relative h-full w-full cursor-pointer rounded-md bg-white bg-opacity-10 p-4 transition-all hover:bg-opacity-20">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">{hackathon.name}</h3>
+                      {hackathon.is_finished && (
+                        <span className="rounded bg-green-600 px-2 py-0.5 text-xs">
+                          Finished
+                        </span>
+                      )}
+                    </div>
+                    {hackathon.description && (
+                      <p className="mt-2 line-clamp-2 text-sm text-gray-400">
+                        {hackathon.description}
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      {new Date(hackathon.updatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-neutral-800 p-8">
+              <p className="text-center text-neutral-300">
+                No hackathons available yet.
+              </p>
+            </div>
+          )}
+        </div>
+
         {error && (
           <Tip>
             <p className="text-red-500">
