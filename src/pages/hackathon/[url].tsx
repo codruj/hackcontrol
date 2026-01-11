@@ -53,14 +53,14 @@ export default function PublicHackathonPage() {
   const { hackathon, winners } = data;
 
   return (
-    <div className="flex min-h-screen flex-col items-center py-8">
+    <div className="flex min-h-screen flex-col items-center pb-8 pt-24">
       <div className="w-full max-w-4xl px-4">
-        <Up>
-          <Link href="/app" className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
-            <ArrowLeft width={16} />
-            <span>Back to Dashboard</span>
-          </Link>
+        <Link href="/app" className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
+          <ArrowLeft width={16} />
+          <span>Back to Dashboard</span>
+        </Link>
 
+        <Up>
           {/* Hackathon Header */}
           <div className="mb-8">
             <div className="flex items-center space-x-3">
