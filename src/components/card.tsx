@@ -1,7 +1,7 @@
 import { hackathonCardProps } from "./hackathonCard";
 import styles from "./hackathonCard.module.css";
 
-const Card = ({ name, description, url }: hackathonCardProps) => {
+const Card = ({ name, description, url, showCode = false }: hackathonCardProps) => {
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     const target = e.target as HTMLDivElement;
     const rect = target.getBoundingClientRect();
@@ -39,7 +39,7 @@ const Card = ({ name, description, url }: hackathonCardProps) => {
         {description && (
           <p className="mt-1 flex-1 text-gray-400">{description}</p>
         )}
-        {Boolean(url) && (
+        {showCode && Boolean(url) && (
           <div className="mt-4 flex items-center space-x-2 text-gray-400">
             <p className="font-mono">{url}</p>
           </div>

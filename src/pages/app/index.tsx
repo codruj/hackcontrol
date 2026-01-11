@@ -91,6 +91,7 @@ const Dashboard = () => {
                         name={hackathon.name}
                         description={hackathon.description || ""}
                         url={hackathon.url}
+                        showCode={canCreateHackathons}
                       />
                     ))}
                 </div>
