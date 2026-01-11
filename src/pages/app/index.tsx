@@ -19,12 +19,17 @@ import Loading from "@/components/loading";
 const Dashboard = () => {
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
+  const [hackathonSearch, setHackathonSearch] = useState("");
   const { data, isLoading, error } = api.hackathon.allHackathons.useQuery();
   const { data: recentHackathons, isLoading: isLoadingRecent } =
     api.hackathon.getRecentHackathons.useQuery();
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
+  };
+
+  const handleHackathonSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setHackathonSearch(e.target.value);
   };
 
   if (isLoading) {
@@ -52,91 +57,67 @@ const Dashboard = () => {
         </div>
       </div>
       <div className="mx-auto mb-16 mt-8 max-w-6xl px-6 md:px-0">
-        <div className="border-b border-neutral-800 pb-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-medium">
-              {canCreateHackathons ? "My Hackathons" : "Available Hackathons"}
-            </h1>
-            {canCreateHackathons && (
+        {/* My Hackathons - Only for admins/organizers */}
+        {canCreateHackathons && (
+          <div className="border-b border-neutral-800 pb-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h1 className="text-2xl font-medium">My Hackathons</h1>
               <span className="rounded-full bg-green-600 px-3 py-1 text-xs font-medium text-white">
                 {isAdmin ? "ADMIN VIEW" : "ORGANIZER VIEW"}
               </span>
+            </div>
+            {data?.hackathon && data?.hackathon?.length > 0 ? (
+              <>
+                <Input
+                  value={search}
+                  placeholder="Search my hackathons..."
+                  onChange={handleSearch}
+                />
+                <div className="container mx-auto mt-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {data?.hackathon
+                      .sort(
+                        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+                      )
+                      .filter(
+                        (hackathon: Hackathon) =>
+                          hackathon.name
+                            .toLowerCase()
+                            .includes(search.toLowerCase()) ||
+                          hackathon.description
+                            ?.toLowerCase()
+                            .includes(search.toLowerCase()),
+                      )
+                      .map((hackathon: Hackathon) => (
+                        <HackathonCard
+                          key={hackathon.id}
+                          name={hackathon.name}
+                          description={hackathon.description || ""}
+                          url={hackathon.url}
+                          showCode={true}
+                        />
+                      ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center">
+                <Up>
+                  <h1 className="mb-2 text-2xl font-medium">Welcome</h1>
+                </Up>
+                <Down delay={0.2}>
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="mb-2 text-center text-neutral-300">
+                      You don&apos;t have any hackathons yet. Create one now!
+                    </p>
+                    <ArrowDown width={32} className="mb-2" />
+                    <CreateNew />
+                  </div>
+                </Down>
+              </div>
             )}
           </div>
-          {data?.hackathon && data?.hackathon?.length > 0 ? (
-            <>
-              <Input
-                value={search}
-                placeholder="Search hackathons..."
-                onChange={handleSearch}
-              />
-              <div className="container mx-auto mt-4">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {data?.hackathon
-                    .sort(
-                      (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-                    )
-                    .filter(
-                      (hackathon: Hackathon) =>
-                        hackathon.name
-                          .toLowerCase()
-                          .includes(search.toLowerCase()) ||
-                        hackathon.description
-                          ?.toLowerCase()
-                          .includes(search.toLowerCase()),
-                    )
-                    .map((hackathon: Hackathon) => (
-                      <HackathonCard
-                        key={hackathon.id}
-                        name={hackathon.name}
-                        description={hackathon.description || ""}
-                        url={hackathon.url}
-                        showCode={canCreateHackathons}
-                      />
-                    ))}
-                </div>
-              </div>
-              {!isAdmin && (
-                <div className="mt-6 rounded-lg border border-blue-800/30 bg-blue-900/10 p-4">
-                  <p className="text-sm text-blue-300">
-                    💡 Click on any hackathon to view details and submit your
-                    project
-                  </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center">
-              <Up>
-                <h1 className="mb-2 text-2xl font-medium">
-                  {canCreateHackathons ? "Welcome" : "No Hackathons Available"}
-                </h1>
-              </Up>
-              <Down delay={0.2}>
-                <div className="flex flex-col items-center justify-center">
-                  {canCreateHackathons ? (
-                    <>
-                      <p className="mb-2 text-center text-neutral-300">
-                        You don&apos;t have any hackathons yet. Create one now!
-                      </p>
-                      <ArrowDown width={32} className="mb-2" />
-                      <CreateNew />
-                    </>
-                  ) : (
-                    <>
-                      <p className="mb-4 text-center text-neutral-300">
-                        No hackathons are currently available. Check back later
-                        or participate using a hackathon key!
-                      </p>
-                      <ArrowDown width={32} className="mb-2" />
-                      <EnterKey />
-                    </>
-                  )}
-                </div>
-              </Down>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Judge Assignments Section */}
         <JudgesDashboard />
@@ -254,40 +235,69 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-        {/* Recent Hackathons Section */}
-        <h1 className="mb-4 mt-8 text-2xl font-medium">Recent Hackathons</h1>
+        {/* Hackathons Section - Public list for everyone */}
+        <h1 className="mb-4 mt-8 text-2xl font-medium">Hackathons</h1>
         <div className="container mx-auto">
           {isLoadingRecent ? (
-            <p className="text-gray-400">Loading recent hackathons...</p>
+            <p className="text-gray-400">Loading hackathons...</p>
           ) : recentHackathons && recentHackathons.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {recentHackathons.map((hackathon) => (
-                <Link
-                  key={hackathon.id}
-                  href={`/hackathon/${hackathon.url}`}
-                  className="block"
-                >
-                  <div className="group relative h-full w-full cursor-pointer rounded-md bg-white bg-opacity-10 p-4 transition-all hover:bg-opacity-20">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium">{hackathon.name}</h3>
-                      {hackathon.is_finished && (
-                        <span className="rounded bg-green-600 px-2 py-0.5 text-xs">
-                          Finished
-                        </span>
-                      )}
-                    </div>
-                    {hackathon.description && (
-                      <p className="mt-2 line-clamp-2 text-sm text-gray-400">
-                        {hackathon.description}
-                      </p>
-                    )}
-                    <p className="mt-2 text-xs text-gray-500">
-                      {new Date(hackathon.updatedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <>
+              <Input
+                value={hackathonSearch}
+                placeholder="Search hackathons..."
+                onChange={handleHackathonSearch}
+              />
+              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {recentHackathons
+                  .filter(
+                    (hackathon) =>
+                      hackathon.name
+                        .toLowerCase()
+                        .includes(hackathonSearch.toLowerCase()) ||
+                      hackathon.description
+                        ?.toLowerCase()
+                        .includes(hackathonSearch.toLowerCase())
+                  )
+                  .sort((a, b) => {
+                    // Sort: ongoing first, then finished
+                    if (a.is_finished !== b.is_finished) {
+                      return a.is_finished ? 1 : -1;
+                    }
+                    // Within same status, sort by most recent
+                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                  })
+                  .map((hackathon) => (
+                    <Link
+                      key={hackathon.id}
+                      href={`/hackathon/${hackathon.url}`}
+                      className="block"
+                    >
+                      <div className="group relative h-full w-full cursor-pointer rounded-md bg-white bg-opacity-10 p-4 transition-all hover:bg-opacity-20">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-medium">{hackathon.name}</h3>
+                          {hackathon.is_finished ? (
+                            <span className="rounded bg-neutral-600 px-2 py-0.5 text-xs">
+                              Finished
+                            </span>
+                          ) : (
+                            <span className="rounded bg-green-600 px-2 py-0.5 text-xs">
+                              Ongoing
+                            </span>
+                          )}
+                        </div>
+                        {hackathon.description && (
+                          <p className="mt-2 line-clamp-2 text-sm text-gray-400">
+                            {hackathon.description}
+                          </p>
+                        )}
+                        <p className="mt-2 text-xs text-gray-500">
+                          {new Date(hackathon.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+              </div>
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border border-neutral-800 p-8">
               <p className="text-center text-neutral-300">
