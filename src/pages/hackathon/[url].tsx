@@ -40,10 +40,10 @@ export default function PublicHackathonPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center space-y-4">
         <p className="text-gray-400">Hackathon not found</p>
-        <Link href="/" className={clsx(ButtonStyles)}>
+        <Link href="/app" className={clsx(ButtonStyles)}>
           <div className="flex items-center space-x-2">
             <ArrowLeft width={16} />
-            <span>Back to Home</span>
+            <span>Back to Dashboard</span>
           </div>
         </Link>
       </div>
@@ -56,9 +56,9 @@ export default function PublicHackathonPage() {
     <div className="flex min-h-screen flex-col items-center py-8">
       <div className="w-full max-w-4xl px-4">
         <Up>
-          <Link href="/" className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
+          <Link href="/app" className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
             <ArrowLeft width={16} />
-            <span>Back to Home</span>
+            <span>Back to Dashboard</span>
           </Link>
 
           {/* Hackathon Header */}
