@@ -127,21 +127,11 @@ export default function PublicHackathonPage() {
                         : "bg-orange-700 bg-opacity-20 border border-orange-700 border-opacity-30"
                     )}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{getPodiumIcon(winner.rank)}</span>
-                        <div>
-                          <h3 className="text-lg font-medium">{winner.title}</h3>
-                          <p className="text-sm text-gray-400">by {winner.creatorName}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold">
-                          {winner.averageScore.toFixed(1)}/10
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {winner.totalScores} judge{winner.totalScores !== 1 ? "s" : ""}
-                        </p>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">{getPodiumIcon(winner.rank)}</span>
+                      <div>
+                        <h3 className="text-lg font-medium">{winner.title}</h3>
+                        <p className="text-sm text-gray-400">by {winner.creatorName}</p>
                       </div>
                     </div>
                     {winner.description && (
