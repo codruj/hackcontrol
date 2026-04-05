@@ -151,9 +151,10 @@ const DashUrl = () => {
                 {managementData.participants
                   .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
                   .map((participant) => (
-                    <ParticipationCard 
-                      key={participant.id} 
+                    <ParticipationCard
+                      key={participant.id}
                       participation={participant}
+                      criteria={managementData.criteria ?? []}
                       isJudging={ownerJudgeStatus?.isJudge || false}
                       hackathonId={hackathon.id}
                       isHackathonFinished={hackathon.is_finished}
@@ -205,9 +206,10 @@ const DashUrl = () => {
                 {judgeData.participants
                   .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
                   .map((participant) => (
-                    <ParticipationCard 
-                      key={participant.id} 
+                    <ParticipationCard
+                      key={participant.id}
                       participation={participant}
+                      criteria={judgeData.criteria ?? []}
                       isJudging={true}
                       hackathonId={hackathon.id}
                       isHackathonFinished={hackathon.is_finished}

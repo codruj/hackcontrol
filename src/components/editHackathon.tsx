@@ -13,6 +13,7 @@ import DeleteHackathon from "./deleteHackathon";
 import { toast } from "sonner";
 import FinishHackathon from "./finishHackathon";
 import JudgeManager from "./judgeManager";
+import CriteriaManager from "./criteriaManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import clsx from "clsx";
 
@@ -62,9 +63,10 @@ const EditHackathon = (props: EditHackathonProps) => {
       wide
     >
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="mb-2 w-full grid grid-cols-2 md:grid-cols-5 h-auto gap-1 p-1">
+        <TabsList className="mb-2 w-full grid grid-cols-3 md:grid-cols-6 h-auto gap-1 p-1">
           <TabsTrigger value="info" className="text-xs px-2 py-2">General</TabsTrigger>
           <TabsTrigger value="rules" className="text-xs px-2 py-2">Rules</TabsTrigger>
+          <TabsTrigger value="criteria" className="text-xs px-2 py-2">Criteria</TabsTrigger>
           <TabsTrigger value="judges" className="text-xs px-2 py-2">Judges</TabsTrigger>
           <TabsTrigger value="finish" className="text-xs px-2 py-2">Finish</TabsTrigger>
           <TabsTrigger value="delete" className="text-xs px-2 py-2">Delete</TabsTrigger>
@@ -183,6 +185,9 @@ const EditHackathon = (props: EditHackathonProps) => {
               </Button>
             </div>
           </form>
+        </TabsContent>
+        <TabsContent value="criteria">
+          <CriteriaManager hackathonId={props.id} />
         </TabsContent>
         <TabsContent value="judges">
           <JudgeManager hackathonId={props.id} />

@@ -1,15 +1,68 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "..";
 
+// Helper: compute weighted average score and number of complete judges for a participation
+function computeWeightedScore(
+  scores: { judgeId: string; criterionId: string | null; score: number }[],
+  criteria: { id: string; weight: number }[],
+): { averageScore: number; completeJudges: number } {
+  if (criteria.length === 0) {
+    // Flat scoring mode
+    const byJudge = new Map<string, number>();
+    for (const s of scores) {
+      if (s.criterionId === null) byJudge.set(s.judgeId, s.score);
+    }
+    const count = byJudge.size;
+    const total = Array.from(byJudge.values()).reduce((a, b) => a + b, 0);
+    return { averageScore: count > 0 ? total / count : 0, completeJudges: count };
+  }
+
+  // Criteria scoring mode: group by judge, keep only complete judges
+  const byJudge = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    if (s.criterionId !== null) {
+      if (!byJudge.has(s.judgeId)) byJudge.set(s.judgeId, new Map());
+      byJudge.get(s.judgeId)!.set(s.criterionId, s.score);
+    }
+  }
+
+  let total = 0;
+  let completeJudges = 0;
+  for (const criterionScores of byJudge.values()) {
+    if (criterionScores.size < criteria.length) continue;
+    let ws = 0;
+    for (const c of criteria) ws += (criterionScores.get(c.id) ?? 0) * (c.weight / 100);
+    total += ws;
+    completeJudges++;
+  }
+
+  return { averageScore: completeJudges > 0 ? total / completeJudges : 0, completeJudges };
+}
+
 export const scoringRouter = createTRPCRouter({
   //------
   // Submit score (judges only) =>
   submitScore: protectedProcedure
     .input(
-      z.object({
-        participationId: z.string(),
-        score: z.number().min(1).max(10),
-      })
+      z.union([
+        // Flat scoring (no criteria)
+        z.object({
+          participationId: z.string(),
+          score: z.number().min(1).max(10),
+          criteriaScores: z.undefined().optional(),
+        }),
+        // Per-criterion scoring
+        z.object({
+          participationId: z.string(),
+          score: z.undefined().optional(),
+          criteriaScores: z.array(
+            z.object({
+              criterionId: z.string(),
+              score: z.number().min(1).max(10),
+            }),
+          ).min(1),
+        }),
+      ])
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -66,21 +119,52 @@ export const scoringRouter = createTRPCRouter({
         throw new Error("Judge record not found");
       }
 
-      // Create or update the score
-      return ctx.prisma.score.upsert({
+      // Per-criterion scoring
+      if (input.criteriaScores && input.criteriaScores.length > 0) {
+        for (const cs of input.criteriaScores) {
+          await ctx.prisma.score.upsert({
+            where: {
+              judgeId_participationId_criterionId: {
+                judgeId: judge.id,
+                participationId: input.participationId,
+                criterionId: cs.criterionId,
+              },
+            },
+            update: { score: cs.score },
+            create: {
+              judgeId: judge.id,
+              participationId: input.participationId,
+              criterionId: cs.criterionId,
+              score: cs.score,
+            },
+          });
+        }
+        return { success: true };
+      }
+
+      // Flat scoring (criterionId = null) — use findFirst+update/create
+      // because upsert doesn't work reliably with NULL in unique constraints
+      const existing = await ctx.prisma.score.findFirst({
         where: {
-          judgeId_participationId: {
-            judgeId: judge.id,
-            participationId: input.participationId,
-          },
-        },
-        update: {
-          score: input.score,
-        },
-        create: {
           judgeId: judge.id,
           participationId: input.participationId,
-          score: input.score,
+          criterionId: null,
+        },
+      });
+
+      if (existing) {
+        return ctx.prisma.score.update({
+          where: { id: existing.id },
+          data: { score: input.score! },
+        });
+      }
+
+      return ctx.prisma.score.create({
+        data: {
+          judgeId: judge.id,
+          participationId: input.participationId,
+          score: input.score!,
+          criterionId: null,
         },
       });
     }),
@@ -153,7 +237,6 @@ export const scoringRouter = createTRPCRouter({
   calculateRankings: publicProcedure
     .input(z.object({ hackathonId: z.string() }))
     .query(async ({ ctx, input }) => {
-      // Get hackathon with min judges requirement
       const hackathon = await ctx.prisma.hackathon.findUnique({
         where: { id: input.hackathonId },
         select: { min_judges_required: true, url: true },
@@ -163,70 +246,42 @@ export const scoringRouter = createTRPCRouter({
         throw new Error("Hackathon not found");
       }
 
-      // Get all participations with their scores
-      const participations = await ctx.prisma.participation.findMany({
-        where: {
-          hackathon_url: hackathon.url,
-        },
-        include: {
-          scores: true,
-        },
+      const criteria = await ctx.prisma.criterion.findMany({
+        where: { hackathonId: input.hackathonId },
+        orderBy: { order: "asc" },
       });
 
-      // Calculate rankings
-      const ranked = participations
-        .map((participation) => {
-          const scores = participation.scores;
-          const totalScores = scores.length;
-          const averageScore = totalScores > 0 
-            ? scores.reduce((sum, s) => sum + s.score, 0) / totalScores 
-            : 0;
+      const participations = await ctx.prisma.participation.findMany({
+        where: { hackathon_url: hackathon.url },
+        include: { scores: true },
+      });
 
-          return {
-            ...participation,
-            averageScore,
-            totalScores,
-            isEligibleForRanking: totalScores >= hackathon.min_judges_required,
-          };
-        })
+      const enrich = (participation: (typeof participations)[number]) => {
+        const { averageScore, completeJudges } = computeWeightedScore(
+          participation.scores,
+          criteria,
+        );
+        return {
+          ...participation,
+          averageScore,
+          totalScores: completeJudges,
+          isEligibleForRanking: completeJudges >= hackathon.min_judges_required,
+        };
+      };
+
+      const enriched = participations.map(enrich);
+
+      const ranked = enriched
         .filter(p => p.isEligibleForRanking)
         .sort((a, b) => {
-          // Sort by average score descending, then by total scores descending as tiebreaker
-          if (b.averageScore !== a.averageScore) {
-            return b.averageScore - a.averageScore;
-          }
+          if (b.averageScore !== a.averageScore) return b.averageScore - a.averageScore;
           return b.totalScores - a.totalScores;
         })
-        .map((submission, index) => ({
-          ...submission,
-          rank: index + 1,
-          isWinner: index === 0,
-          isPodium: index < 3,
-        }));
+        .map((s, i) => ({ ...s, rank: i + 1, isWinner: i === 0, isPodium: i < 3 }));
 
-      // Get ineligible submissions
-      const ineligible = participations
-        .map((participation) => {
-          const scores = participation.scores;
-          const totalScores = scores.length;
-          const averageScore = totalScores > 0 
-            ? scores.reduce((sum, s) => sum + s.score, 0) / totalScores 
-            : 0;
+      const ineligible = enriched.filter(p => !p.isEligibleForRanking);
 
-          return {
-            ...participation,
-            averageScore,
-            totalScores,
-            isEligibleForRanking: totalScores >= hackathon.min_judges_required,
-          };
-        })
-        .filter(p => !p.isEligibleForRanking);
-
-      return {
-        eligible: ranked,
-        ineligible,
-        minJudgesRequired: hackathon.min_judges_required,
-      };
+      return { eligible: ranked, ineligible, minJudgesRequired: hackathon.min_judges_required };
     }),
 
   //------

@@ -14,6 +14,39 @@ import {
   updateHackathonSchema,
 } from "@/schema/hackathon";
 
+// Weighted scoring helper (duplicated from scoring.router to avoid circular deps)
+function computeWeightedScore(
+  scores: { judgeId: string; criterionId: string | null; score: number }[],
+  criteria: { id: string; weight: number }[],
+): { averageScore: number; completeJudges: number } {
+  if (criteria.length === 0) {
+    const byJudge = new Map<string, number>();
+    for (const s of scores) {
+      if (s.criterionId === null) byJudge.set(s.judgeId, s.score);
+    }
+    const count = byJudge.size;
+    const total = Array.from(byJudge.values()).reduce((a, b) => a + b, 0);
+    return { averageScore: count > 0 ? total / count : 0, completeJudges: count };
+  }
+  const byJudge = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    if (s.criterionId !== null) {
+      if (!byJudge.has(s.judgeId)) byJudge.set(s.judgeId, new Map());
+      byJudge.get(s.judgeId)!.set(s.criterionId, s.score);
+    }
+  }
+  let total = 0;
+  let completeJudges = 0;
+  for (const cs of byJudge.values()) {
+    if (cs.size < criteria.length) continue;
+    let ws = 0;
+    for (const c of criteria) ws += (cs.get(c.id) ?? 0) * (c.weight / 100);
+    total += ws;
+    completeJudges++;
+  }
+  return { averageScore: completeJudges > 0 ? total / completeJudges : 0, completeJudges };
+}
+
 export const hackathonRouter = createTRPCRouter({
   //------
   // Get all hackathons - different behavior based on user role =>
@@ -334,10 +367,16 @@ export const hackathonRouter = createTRPCRouter({
         },
       });
 
+      const criteria = await ctx.prisma.criterion.findMany({
+        where: { hackathonId: hackathon.id },
+        orderBy: { order: "asc" },
+      });
+
       return {
         hackathon,
         participants,
         judgeCount,
+        criteria,
         isOwner: true,
       };
     }),
@@ -536,9 +575,15 @@ export const hackathonRouter = createTRPCRouter({
         },
       });
 
+      const criteria = await ctx.prisma.criterion.findMany({
+        where: { hackathonId: hackathon.id },
+        orderBy: { order: "asc" },
+      });
+
       return {
         hackathon,
         participants,
+        criteria,
         isJudge: true,
       };
     }),
@@ -572,28 +617,27 @@ export const hackathonRouter = createTRPCRouter({
         },
       });
 
-      // Calculate rankings using the same logic as the scoring router
+      const criteria = await ctx.prisma.criterion.findMany({
+        where: { hackathonId: hackathon.id },
+        orderBy: { order: "asc" },
+      });
+
       const ranked = participations
         .map((participation) => {
-          const scores = participation.scores;
-          const totalScores = scores.length;
-          const averageScore = totalScores > 0 
-            ? scores.reduce((sum, s) => sum + s.score, 0) / totalScores 
-            : 0;
-
+          const { averageScore, completeJudges } = computeWeightedScore(
+            participation.scores,
+            criteria,
+          );
           return {
             ...participation,
             averageScore,
-            totalScores,
-            isEligibleForRanking: totalScores >= hackathon.min_judges_required,
+            totalScores: completeJudges,
+            isEligibleForRanking: completeJudges >= hackathon.min_judges_required,
           };
         })
         .filter(p => p.isEligibleForRanking)
         .sort((a, b) => {
-          // Sort by average score descending, then by total scores descending as tiebreaker
-          if (b.averageScore !== a.averageScore) {
-            return b.averageScore - a.averageScore;
-          }
+          if (b.averageScore !== a.averageScore) return b.averageScore - a.averageScore;
           return b.totalScores - a.totalScores;
         });
 

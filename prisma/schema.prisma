@@ -28,6 +28,7 @@ model Hackathon {
   owner               User            @relation(fields: [creatorId], references: [id])
   Judge               Judge[]
   participations      Participation[]
+  judgingCriteria     Criterion[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -59,14 +60,28 @@ model Score {
   id              String        @id @default(cuid())
   judgeId         String
   participationId String
+  criterionId     String?
   score           Int
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   judge           Judge         @relation(fields: [judgeId], references: [id], onDelete: Cascade)
   participation   Participation @relation(fields: [participationId], references: [id], onDelete: Cascade)
+  criterion       Criterion?    @relation(fields: [criterionId], references: [id], onDelete: SetNull)
 
-  @@unique([judgeId, participationId])
+  @@unique([judgeId, participationId, criterionId])
   @@map("scores")
+}
+
+model Criterion {
+  id          String    @id @default(cuid())
+  name        String
+  weight      Float
+  order       Int
+  hackathonId String
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  scores      Score[]
+
+  @@map("criteria")
 }
 
 model Announcement {
