@@ -22,7 +22,7 @@ const CriteriaManager = ({ hackathonId }: CriteriaManagerProps) => {
 
   const { mutate: save, isLoading: isSaving } = api.criteria.setCriteria.useMutation({
     onSuccess: () => {
-      toast.success("Criteriile au fost salvate");
+      toast.success("Criteria saved");
       setRows(null);
       utils.criteria.getCriteria.invalidate({ hackathonId });
     },
@@ -31,14 +31,13 @@ const CriteriaManager = ({ hackathonId }: CriteriaManagerProps) => {
 
   const { mutate: clear, isLoading: isClearing } = api.criteria.clearCriteria.useMutation({
     onSuccess: () => {
-      toast.success("Criteriile au fost șterse");
+      toast.success("Criteria cleared");
       setRows(null);
       utils.criteria.getCriteria.invalidate({ hackathonId });
     },
     onError: (err) => toast.error(err.message),
   });
 
-  // Work on a local copy; fall back to saved data
   const activeRows: CriterionRow[] =
     rows ??
     (existing && existing.length > 0
@@ -72,34 +71,38 @@ const CriteriaManager = ({ hackathonId }: CriteriaManagerProps) => {
     });
   };
 
-  if (isLoading) return <p className="text-sm text-neutral-500">Se încarcă...</p>;
+  if (isLoading) return <p className="text-sm text-neutral-500">Loading...</p>;
 
   return (
     <div className="space-y-3">
       {/* Rows */}
       {activeRows.map((row, i) => (
         <div key={i} className="flex items-center gap-2">
-          <input
-            type="text"
-            value={row.name}
-            onChange={(e) => update(i, "name", e.target.value)}
-            placeholder={`Criteriu ${i + 1}`}
-            className={`${inputStyles} flex-1`}
-          />
-          <input
-            type="number"
-            value={row.weight}
-            onChange={(e) => update(i, "weight", parseFloat(e.target.value) || 0)}
-            min={0.1}
-            max={100}
-            step={0.1}
-            className={`${inputStyles} w-24 text-right`}
-          />
-          <span className="text-sm text-neutral-400 w-4">%</span>
+          <div className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={row.name}
+              onChange={(e) => update(i, "name", e.target.value)}
+              placeholder={`Criterion ${i + 1}`}
+              className={inputStyles}
+            />
+          </div>
+          <div className="w-20 shrink-0">
+            <input
+              type="number"
+              value={row.weight}
+              onChange={(e) => update(i, "weight", parseFloat(e.target.value) || 0)}
+              min={0.1}
+              max={100}
+              step={0.1}
+              className={`${inputStyles} text-right`}
+            />
+          </div>
+          <span className="text-sm text-neutral-400 shrink-0">%</span>
           <button
             onClick={() => remove(i)}
             disabled={activeRows.length === 1}
-            className="text-neutral-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="text-neutral-500 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
           >
             ✕
           </button>
@@ -120,24 +123,24 @@ const CriteriaManager = ({ hackathonId }: CriteriaManagerProps) => {
       </div>
 
       {!weightOk && activeRows.length > 0 && (
-        <Alert>Suma ponderilor trebuie să fie exact 100%</Alert>
+        <Alert>Weights must sum to exactly 100%</Alert>
       )}
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap">
         {activeRows.length < 7 && (
           <button onClick={add} className="text-sm text-blue-400 hover:text-blue-300">
-            + Adaugă criteriu
+            + Add criterion
           </button>
         )}
         <div className="flex-1" />
         {existing && existing.length > 0 && !rows && (
           <Button onClick={() => clear({ hackathonId })} disabled={isClearing}>
-            {isClearing ? "Se șterge..." : "Șterge criteriile"}
+            {isClearing ? "Clearing..." : "Clear criteria"}
           </Button>
         )}
         <Button onClick={handleSave} disabled={!canSave || isSaving} loadingstatus={isSaving}>
-          {isSaving ? "Se salvează..." : "Salvează criteriile"}
+          {isSaving ? "Saving..." : "Save criteria"}
         </Button>
       </div>
     </div>

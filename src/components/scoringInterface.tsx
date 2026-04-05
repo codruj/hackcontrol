@@ -48,7 +48,7 @@ const ScoringInterface = ({
   const { mutate: submitScore } = api.scoring.submitScore.useMutation({
     onSuccess: () => {
       if (!hasCriteria) toast.success(`Score ${selectedScore}/10 submitted for ${title}`);
-      else toast.success(`Scorurile au fost trimise pentru ${title}`);
+      else toast.success(`Scores submitted for ${title}`);
       setIsSubmitting(false);
       onScoreSubmitted?.();
     },
@@ -62,7 +62,7 @@ const ScoringInterface = ({
     if (hasCriteria) {
       const missing = criteria.filter((c) => !criteriaScores[c.id]);
       if (missing.length > 0) {
-        toast.error(`Acordă note pentru toate criteriile`);
+        toast.error(`Please score all criteria`);
         return;
       }
       setIsSubmitting(true);
@@ -131,7 +131,7 @@ const ScoringInterface = ({
         {weightedPreview !== null && (
           <div className="text-center space-y-4">
             <div className="bg-neutral-800 rounded-lg p-4 border border-neutral-700">
-              <p className="text-sm text-neutral-400 mb-1">Scor ponderat:</p>
+              <p className="text-sm text-neutral-400 mb-1">Weighted score:</p>
               <p className="text-2xl font-bold text-white">{weightedPreview.toFixed(2)}/10</p>
             </div>
             <Button
@@ -140,7 +140,7 @@ const ScoringInterface = ({
               loadingstatus={isSubmitting}
               className="w-full"
             >
-              {isSubmitting ? "Se trimite..." : isEditing ? "Actualizează scorurile" : "Trimite scorurile"}
+              {isSubmitting ? "Submitting..." : isEditing ? "Update scores" : "Submit scores"}
             </Button>
           </div>
         )}
@@ -151,7 +151,7 @@ const ScoringInterface = ({
             disabled={true}
             className="w-full opacity-50 cursor-not-allowed"
           >
-            Acordă note pentru toate criteriile
+            Score all criteria to continue
           </Button>
         )}
       </div>

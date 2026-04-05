@@ -18,7 +18,7 @@ export const criteriaRouter = createTRPCRouter({
         criteria: z
           .array(
             z.object({
-              name: z.string().min(1, "Numele este obligatoriu").max(100),
+              name: z.string().min(1, "Name is required").max(100),
               weight: z.number().min(0.1).max(100),
               order: z.number().int().min(1).max(7),
             }),
@@ -31,11 +31,11 @@ export const criteriaRouter = createTRPCRouter({
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: { id: input.hackathonId, creatorId: ctx.session.user.id },
       });
-      if (!hackathon) throw new Error("Hackathon negăsit sau nu ai permisiuni");
+      if (!hackathon) throw new Error("Hackathon not found or insufficient permissions");
 
       const totalWeight = input.criteria.reduce((s, c) => s + c.weight, 0);
       if (Math.abs(totalWeight - 100) > 0.5)
-        throw new Error(`Suma ponderilor trebuie să fie 100% (acum: ${totalWeight.toFixed(1)}%)`);
+        throw new Error(`Weights must sum to 100% (currently: ${totalWeight.toFixed(1)}%)`);
 
       await ctx.prisma.criterion.deleteMany({ where: { hackathonId: input.hackathonId } });
 
@@ -60,7 +60,7 @@ export const criteriaRouter = createTRPCRouter({
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: { id: input.hackathonId, creatorId: ctx.session.user.id },
       });
-      if (!hackathon) throw new Error("Hackathon negăsit sau nu ai permisiuni");
+      if (!hackathon) throw new Error("Hackathon not found or insufficient permissions");
       return ctx.prisma.criterion.deleteMany({ where: { hackathonId: input.hackathonId } });
     }),
 });
