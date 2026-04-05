@@ -1,9 +1,5 @@
-// -----------------------------------
-// Initial config:
-// -----------------------------------
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -12,80 +8,65 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  ORGANIZER
-  USER
-}
-
-enum crdb_internal_region {
-  aws_eu_central_1 @map("aws-eu-central-1")
-}
-
 model Widget {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 }
 
-// -----------------------------------
-// Tables:
-// -----------------------------------
-
 model Hackathon {
-  id                   String          @id @default(cuid())
-  name                 String
-  url                  String          @unique
-  description          String?
-  rules                String?
-  criteria             String?
-  owner                User?           @relation(fields: [creatorId], references: [id])
-  creatorId            String
-  updatedAt            DateTime        @default(now()) @updatedAt
-  is_finished          Boolean         @default(false)
-  verified             Boolean         @default(false)
-  min_judges_required  Int             @default(2)
-  participations       Participation[]
-  announcements        Announcement[]
-  Judge                Judge[]
+  id                  String          @id @default(cuid())
+  name                String
+  url                 String          @unique
+  description         String?
+  rules               String?
+  criteria            String?
+  creatorId           String
+  updatedAt           DateTime        @default(now()) @updatedAt
+  is_finished         Boolean         @default(false)
+  verified            Boolean         @default(false)
+  min_judges_required Int             @default(2)
+  announcements       Announcement[]
+  owner               User            @relation(fields: [creatorId], references: [id])
+  Judge               Judge[]
+  participations      Participation[]
 
   @@unique([url, creatorId])
-  @@map(name: "hackathons")
+  @@map("hackathons")
 }
 
 model Participation {
-  id             String     @id @default(cuid())
-  is_reviewed    Boolean    @default(false)
-  is_winner      Boolean    @default(false)
+  id             String    @id @default(cuid())
+  is_reviewed    Boolean   @default(false)
+  is_winner      Boolean   @default(false)
   title          String
   description    String
   project_url    String
   hackathon_name String
   hackathon_url  String
-  createdBy      User?      @relation(fields: [creatorId], references: [id])
   creatorId      String
   creatorName    String
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  hackathon      Hackathon? @relation(fields: [hackathon_url], references: [url], onDelete: Cascade)
-  scores         Score[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   team_members   Json?
+  createdBy      User      @relation(fields: [creatorId], references: [id])
+  hackathon      Hackathon @relation(fields: [hackathon_url], references: [url], onDelete: Cascade)
+  scores         Score[]
 
   @@unique([creatorId, hackathon_url])
-  @@map(name: "participations")
+  @@map("participations")
 }
 
 model Score {
-  id             String        @id @default(cuid())
-  judgeId        String
+  id              String        @id @default(cuid())
+  judgeId         String
   participationId String
-  score          Int
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  
-  judge          Judge         @relation(fields: [judgeId], references: [id], onDelete: Cascade)
-  participation  Participation @relation(fields: [participationId], references: [id], onDelete: Cascade)
-  
+  score           Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  judge           Judge         @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  participation   Participation @relation(fields: [participationId], references: [id], onDelete: Cascade)
+
   @@unique([judgeId, participationId])
-  @@map(name: "scores")
+  @@map("scores")
 }
 
 model Announcement {
@@ -93,17 +74,13 @@ model Announcement {
   title       String
   content     String
   important   Boolean   @default(false)
-  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   hackathonId String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
 
-  @@map(name: "announcements")
+  @@map("announcements")
 }
-
-// -----------------------------------
-// User:
-// -----------------------------------
 
 model Account {
   id                String   @id @default(cuid())
@@ -118,12 +95,12 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  createdAt         DateTime @default(now()) @map(name: "created_at")
-  updatedAt         DateTime @default(now()) @map(name: "updated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @map("updated_at")
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
-  @@map(name: "accounts")
+  @@map("accounts")
 }
 
 model Session {
@@ -133,7 +110,7 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map(name: "sessions")
+  @@map("sessions")
 }
 
 model User {
@@ -146,30 +123,29 @@ model User {
   role             Role            @default(USER)
   access           Boolean         @default(true)
   accounts         Account[]
-  sessions         Session[]
   hackathons       Hackathon[]
-  participations   Participation[]
-  judgedHackathons Judge[]
   invitedJudges    Judge[]         @relation("JudgeInviter")
+  judgedHackathons Judge[]
+  participations   Participation[]
+  sessions         Session[]
 
-  @@map(name: "users")
+  @@map("users")
 }
 
 model Judge {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   hackathonId String
   invitedBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hackathon Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
-  inviter   User      @relation("JudgeInviter", fields: [invitedBy], references: [id])
-  scores    Score[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  inviter     User      @relation("JudgeInviter", fields: [invitedBy], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scores      Score[]
 
   @@unique([userId, hackathonId])
-  @@map(name: "judges")
+  @@map("judges")
 }
 
 model VerificationToken {
@@ -178,5 +154,15 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-  @@map(name: "verification_tokens")
+  @@map("verification_tokens")
+}
+
+enum Role {
+  ADMIN
+  ORGANIZER
+  USER
+}
+
+enum crdb_internal_region {
+  aws_eu_central_1 @map("aws-eu-central-1")
 }
