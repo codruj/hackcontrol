@@ -11,7 +11,7 @@ const EnterKey = () => {
 
   const goSendProject = (key: string) => {
     setLoading(true);
-    router.push(`https://phck.vercel.app/send/${key}`);
+    router.push(`https://hackathons.utcluj.ro/send/${key}`);
   };
 
   return (
@@ -21,7 +21,7 @@ const EnterKey = () => {
     >
       <form onSubmit={() => goSendProject(key)}>
         <div className="mb-2">
-          <label htmlFor="key">phck.vercel.app/send/</label>
+          <label htmlFor="key">hackathons.utcluj.ro/send/</label>
           <input
             id="key"
             className={inputStyles}

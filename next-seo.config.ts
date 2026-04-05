@@ -29,23 +29,5 @@ export const nextSeoConfig = {
       href: "/manifest.json",
     },
   ],
-  openGraph: {
-    site_name: "Project Hackathon",
-    url: "https://phck.vercel.app",
-    type: "website",
-    locale: "en_IE",
-    images: [
-      {
-        url: "/images/og_image.jpg",
-        width: 1920,
-        height: 1080,
-        type: "image/jpg",
-      },
-    ],
-  },
-  twitter: {
-    handle: "@pheralb_",
-    site: "https://phck.vercel.app",
-    cardType: "summary_large_image",
-  },
+
 };
