@@ -17,16 +17,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Login button — top right */}
-      <div className="fixed top-0 right-0 z-50 p-4">
-        <Link href="auth" underline={false} className={clsx(ButtonStyles)}>
-          <div className="flex items-center space-x-2">
-            <span>Sign In</span>
-            <ArrowRight width={16} />
-          </div>
-        </Link>
-      </div>
-
       {/* Hero */}
       <div className="flex flex-col items-center justify-center space-y-5 py-20 px-4">
         <Up>
@@ -51,6 +41,12 @@ export default function Home() {
               <span>Repository</span>
             </div>
           </ExternalLink>
+          <Link href="auth" underline={false} className={clsx(ButtonStyles)}>
+            <div className="flex items-center space-x-2">
+              <span>Get Started</span>
+              <ArrowRight width={16} />
+            </div>
+          </Link>
         </div>
         <div className="mb-6 mt-4 flex flex-col gap-4 md:flex-row md:gap-3">
           <HackathonCard
