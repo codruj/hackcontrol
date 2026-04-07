@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { api } from "@/trpc/api";
 import Up from "@/animations/up";
 import { ArrowLeft, Trophy } from "@/ui/icons";
@@ -27,6 +28,9 @@ export default function PublicHackathonPage() {
   const router = useRouter();
   const { url } = router.query;
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const { data: session } = useSession();
+  const backHref = session ? "/app" : "/";
+  const backLabel = session ? "Back to Dashboard" : "Back";
 
   const { data, isLoading, error } = api.hackathon.getHackathonWithWinners.useQuery(
     { url: url as string },
@@ -45,10 +49,10 @@ export default function PublicHackathonPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center space-y-4">
         <p className="text-gray-400">Hackathon not found</p>
-        <Link href="/app" className={clsx(ButtonStyles)}>
+        <Link href={backHref} className={clsx(ButtonStyles)}>
           <div className="flex items-center space-x-2">
             <ArrowLeft width={16} />
-            <span>Back to Dashboard</span>
+            <span>{backLabel}</span>
           </div>
         </Link>
       </div>
@@ -77,9 +81,9 @@ export default function PublicHackathonPage() {
   return (
     <div className="flex min-h-screen flex-col items-center pb-8 pt-24">
       <div className="w-full max-w-4xl px-4">
-        <Link href="/app" className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
+        <Link href={backHref} className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
           <ArrowLeft width={16} />
-          <span>Back to Dashboard</span>
+          <span>{backLabel}</span>
         </Link>
 
         <Up>
