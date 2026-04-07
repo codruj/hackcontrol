@@ -161,10 +161,27 @@ export const hackathonRouter = createTRPCRouter({
           description: true,
           rules: true,
           criteria: true,
+          prizes: true,
+          matchmaking: true,
+          categories: true,
+          organizers: true,
+          judges_info: true,
+          timeline: true,
           url: true,
           is_finished: true,
           updatedAt: true,
           min_judges_required: true,
+          Judge: {
+            select: {
+              user: {
+                select: {
+                  name: true,
+                  username: true,
+                  image: true,
+                },
+              },
+            },
+          },
         },
       });
 
