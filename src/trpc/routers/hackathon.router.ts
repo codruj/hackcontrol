@@ -238,6 +238,11 @@ export const hackathonRouter = createTRPCRouter({
           description: input.description,
           rules: input.rules,
           criteria: input.criteria,
+          prizes: input.prizes,
+          matchmaking: input.matchmaking,
+          categories: input.categories,
+          organizers: input.organizers,
+          timeline: input.timeline ?? [],
           is_finished: input.is_finished,
           creatorId: userId,
           verified: true, // Auto-verify for now
@@ -284,6 +289,11 @@ export const hackathonRouter = createTRPCRouter({
           description: input.description,
           rules: input.rules,
           criteria: input.criteria,
+          prizes: input.prizes,
+          matchmaking: input.matchmaking,
+          categories: input.categories,
+          organizers: input.organizers,
+          timeline: input.timeline,
           is_finished: input.is_finished,
         },
       });
@@ -396,10 +406,26 @@ export const hackathonRouter = createTRPCRouter({
           description: true,
           rules: true,
           criteria: true,
+          prizes: true,
+          matchmaking: true,
+          categories: true,
+          organizers: true,
+          timeline: true,
           url: true,
           is_finished: true,
           creatorId: true,
           updatedAt: true,
+          Judge: {
+            select: {
+              user: {
+                select: {
+                  name: true,
+                  username: true,
+                  image: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -513,6 +539,11 @@ export const hackathonRouter = createTRPCRouter({
           description: true,
           rules: true,
           criteria: true,
+          prizes: true,
+          matchmaking: true,
+          categories: true,
+          organizers: true,
+          timeline: true,
           url: true,
           is_finished: true,
           creatorId: true,

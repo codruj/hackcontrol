@@ -5,6 +5,10 @@ export type THackathon = {
   description: string;
   rules?: string;
   criteria?: string;
+  prizes?: string;
+  matchmaking?: string;
+  categories?: string;
+  organizers?: string;
   is_finished: boolean;
   owner: string;
   creation_date: Date;

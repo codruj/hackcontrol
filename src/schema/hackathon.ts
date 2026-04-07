@@ -26,6 +26,11 @@ export const newHackathonSchema = z.object({
   description: z.string(),
   rules: z.string().optional(),
   criteria: z.string().optional(),
+  prizes: z.string().max(2000).optional(),
+  matchmaking: z.string().max(2000).optional(),
+  categories: z.string().max(500).optional(),
+  organizers: z.string().max(500).optional(),
+  timeline: z.array(z.string()).max(10).optional(),
   is_finished: z.boolean(),
 });
 
@@ -40,6 +45,11 @@ export const updateHackathonSchema = z.object({
   description: z.string(),
   rules: z.string().optional(),
   criteria: z.string().optional(),
+  prizes: z.string().max(2000).optional(),
+  matchmaking: z.string().max(2000).optional(),
+  categories: z.string().max(500).optional(),
+  organizers: z.string().max(500).optional(),
+  timeline: z.array(z.string()).max(10).optional(),
   is_finished: z.boolean(),
 });
 
