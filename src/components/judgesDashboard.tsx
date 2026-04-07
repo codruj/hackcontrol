@@ -16,7 +16,7 @@ const JudgeAssignmentCard = ({ assignment }: { assignment: any }) => {
     { enabled: !assignment.hackathon.is_finished }
   );
 
-  const scoredCount = scores?.length || 0;
+  const scoredCount = scores ? new Set(scores.map(s => s.participation.id)).size : 0;
   const totalCount = participations?.length || 0;
   const progressPercentage = totalCount > 0 ? Math.round((scoredCount / totalCount) * 100) : 0;
 
