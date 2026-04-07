@@ -23,6 +23,7 @@ model Hackathon {
   matchmaking         String?
   categories          String?
   organizers          String?
+  judges_info         String?
   timeline            Json?
   creatorId           String
   updatedAt           DateTime        @default(now()) @updatedAt

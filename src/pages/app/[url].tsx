@@ -117,6 +117,7 @@ const DashUrl = () => {
               matchmaking={(hackathon as any).matchmaking || undefined}
               categories={(hackathon as any).categories || undefined}
               organizers={(hackathon as any).organizers || undefined}
+              judges_info={(hackathon as any).judges_info || undefined}
               timeline={(hackathon as any).timeline || undefined}
               is_finished={hackathon.is_finished}
             />

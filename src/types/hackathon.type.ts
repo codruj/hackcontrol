@@ -9,6 +9,7 @@ export type THackathon = {
   matchmaking?: string;
   categories?: string;
   organizers?: string;
+  judges_info?: string;
   is_finished: boolean;
   owner: string;
   creation_date: Date;

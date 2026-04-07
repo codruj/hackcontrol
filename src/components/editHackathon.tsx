@@ -48,6 +48,7 @@ const EditHackathon = (props: EditHackathonProps) => {
       matchmaking: props.matchmaking,
       categories: props.categories,
       organizers: props.organizers,
+      judges_info: props.judges_info,
     },
   });
 
@@ -91,6 +92,7 @@ const EditHackathon = (props: EditHackathonProps) => {
         matchmaking: formValues.matchmaking,
         categories: formValues.categories,
         organizers: formValues.organizers,
+        judges_info: formValues.judges_info,
         is_finished: props.is_finished,
         timeline: timelineSteps.filter((s) => s.trim().length > 0),
       });
@@ -310,6 +312,25 @@ const EditHackathon = (props: EditHackathonProps) => {
                 })}
               />
               {errors.organizers && <Alert>{errors.organizers?.message}</Alert>}
+            </div>
+            <div className="mb-6">
+              <label htmlFor="judges_info">Judges:</label>
+              <textarea
+                id="judges_info"
+                defaultValue={props.judges_info || ""}
+                className={inputStyles}
+                placeholder="Describe the judges — names, roles, organizations (max 2000 characters)"
+                rows={4}
+                autoComplete="off"
+                disabled={loading}
+                {...register("judges_info", {
+                  maxLength: {
+                    value: 2000,
+                    message: "Judges info must be less than 2000 characters",
+                  },
+                })}
+              />
+              {errors.judges_info && <Alert>{errors.judges_info?.message}</Alert>}
             </div>
             <div className="mb-6">
               <label htmlFor="matchmaking">Matchmaking / Team Formation:</label>

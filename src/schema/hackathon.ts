@@ -30,6 +30,7 @@ export const newHackathonSchema = z.object({
   matchmaking: z.string().max(2000).optional(),
   categories: z.string().max(500).optional(),
   organizers: z.string().max(500).optional(),
+  judges_info: z.string().max(2000).optional(),
   timeline: z.array(z.string()).max(10).optional(),
   is_finished: z.boolean(),
 });
@@ -49,6 +50,7 @@ export const updateHackathonSchema = z.object({
   matchmaking: z.string().max(2000).optional(),
   categories: z.string().max(500).optional(),
   organizers: z.string().max(500).optional(),
+  judges_info: z.string().max(2000).optional(),
   timeline: z.array(z.string()).max(10).optional(),
   is_finished: z.boolean(),
 });
