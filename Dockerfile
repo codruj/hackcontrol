@@ -1,11 +1,4 @@
-# Use the Debian-based 'slim' image
-FROM node:18-slim
-
-# --- ADD THIS LINE ---
-# Install the OpenSSL CLI tool so Prisma can auto-detect the version
-RUN apt-get update && apt-get install -y openssl
-
-# -----------------------
+FROM node:18
 
 WORKDIR /app
 
