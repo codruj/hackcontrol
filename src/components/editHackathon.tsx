@@ -17,6 +17,8 @@ import CategoryManager from "./categoryManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import clsx from "clsx";
 
+type Sponsor = { name: string; logo?: string; website?: string };
+
 interface EditHackathonProps extends updateHackathon {
   key: string;
   url: string;
@@ -30,6 +32,13 @@ const EditHackathon = (props: EditHackathonProps) => {
   const [timelineSteps, setTimelineSteps] = useState<string[]>(() => {
     if (props.timeline && Array.isArray(props.timeline)) {
       return props.timeline as string[];
+    }
+    return [];
+  });
+
+  const [sponsorsList, setSponsorsList] = useState<Sponsor[]>(() => {
+    if (props.sponsors && Array.isArray(props.sponsors)) {
+      return props.sponsors as Sponsor[];
     }
     return [];
   });
@@ -71,6 +80,7 @@ const EditHackathon = (props: EditHackathonProps) => {
         id: props.id,
         is_finished: false,
         timeline: timelineSteps.filter((s) => s.trim().length > 0),
+        sponsors: sponsorsList,
       });
       toast.success("Hackathon updated successfully");
     } catch (err) {
@@ -96,6 +106,7 @@ const EditHackathon = (props: EditHackathonProps) => {
         judges_info: formValues.judges_info,
         is_finished: props.is_finished,
         timeline: timelineSteps.filter((s) => s.trim().length > 0),
+        sponsors: sponsorsList,
       });
       toast.success("Timeline saved");
     } catch (err) {
@@ -117,6 +128,44 @@ const EditHackathon = (props: EditHackathonProps) => {
     setTimelineSteps(timelineSteps.filter((_, idx) => idx !== i));
   };
 
+  const addSponsor = () => {
+    setSponsorsList([...sponsorsList, { name: "", logo: "", website: "" }]);
+  };
+
+  const updateSponsor = (i: number, field: keyof Sponsor, value: string) => {
+    setSponsorsList(sponsorsList.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+  };
+
+  const removeSponsor = (i: number) => {
+    setSponsorsList(sponsorsList.filter((_, idx) => idx !== i));
+  };
+
+  const saveSponsors = () => {
+    try {
+      setLoading(true);
+      const formValues = getValues();
+      mutate({
+        id: props.id,
+        name: formValues.name || props.name,
+        description: formValues.description || props.description,
+        rules: formValues.rules,
+        criteria: formValues.criteria,
+        prizes: formValues.prizes,
+        matchmaking: formValues.matchmaking,
+        categories: formValues.categories,
+        organizers: formValues.organizers,
+        judges_info: formValues.judges_info,
+        is_finished: props.is_finished,
+        timeline: timelineSteps.filter((s) => s.trim().length > 0),
+        sponsors: sponsorsList.filter((s) => s.name.trim().length > 0),
+      });
+      toast.success("Sponsors saved");
+    } catch (err) {
+      toast.error("Something went wrong");
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal
       btn={<Button icon={<Settings width={18} />}>Settings</Button>}
@@ -124,11 +173,12 @@ const EditHackathon = (props: EditHackathonProps) => {
       wide
     >
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="mb-2 w-full grid grid-cols-5 md:grid-cols-9 h-auto gap-1 p-1">
+        <TabsList className="mb-2 w-full grid grid-cols-5 md:grid-cols-10 h-auto gap-1 p-1">
           <TabsTrigger value="info" className="text-xs px-2 py-2">General</TabsTrigger>
           <TabsTrigger value="rules" className="text-xs px-2 py-2">Rules</TabsTrigger>
           <TabsTrigger value="details" className="text-xs px-2 py-2">Details</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs px-2 py-2">Timeline</TabsTrigger>
+          <TabsTrigger value="sponsors" className="text-xs px-2 py-2">Sponsors</TabsTrigger>
           <TabsTrigger value="categories" className="text-xs px-2 py-2">Categories</TabsTrigger>
           <TabsTrigger value="criteria" className="text-xs px-2 py-2">Criteria</TabsTrigger>
           <TabsTrigger value="judges" className="text-xs px-2 py-2">Judges</TabsTrigger>
@@ -420,6 +470,83 @@ const EditHackathon = (props: EditHackathonProps) => {
                 icon={<SaveFloppyDisk width={17} />}
               >
                 {loading ? "Saving..." : "Save Timeline"}
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Sponsors tab */}
+        <TabsContent value="sponsors">
+          <div className="mb-3 space-y-3">
+            <p className="text-sm text-neutral-400">
+              Add sponsors with an optional logo URL and website link.
+            </p>
+
+            {sponsorsList.length === 0 && (
+              <p className="text-sm italic text-neutral-500">No sponsors added yet.</p>
+            )}
+
+            {sponsorsList.map((sponsor, i) => (
+              <div key={i} className="flex flex-col gap-2 rounded-lg border border-neutral-800 p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-500 w-12 shrink-0">Name</span>
+                  <input
+                    type="text"
+                    value={sponsor.name}
+                    onChange={(e) => updateSponsor(i, "name", e.target.value)}
+                    placeholder="Sponsor name"
+                    className={clsx(inputStyles, "flex-1")}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeSponsor(i)}
+                    className="text-neutral-500 hover:text-red-400 shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-500 w-12 shrink-0">Logo</span>
+                  <input
+                    type="text"
+                    value={sponsor.logo ?? ""}
+                    onChange={(e) => updateSponsor(i, "logo", e.target.value)}
+                    placeholder="Logo image URL (optional)"
+                    className={clsx(inputStyles, "flex-1")}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-500 w-12 shrink-0">Link</span>
+                  <input
+                    type="text"
+                    value={sponsor.website ?? ""}
+                    onChange={(e) => updateSponsor(i, "website", e.target.value)}
+                    placeholder="Website URL (optional)"
+                    className={clsx(inputStyles, "flex-1")}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              <button
+                type="button"
+                onClick={addSponsor}
+                className="text-sm text-blue-400 hover:text-blue-300"
+              >
+                + Add sponsor
+              </button>
+              <div className="flex-1" />
+              <Button
+                onClick={saveSponsors}
+                disabled={loading}
+                loadingstatus={loading}
+                icon={<SaveFloppyDisk width={17} />}
+              >
+                {loading ? "Saving..." : "Save Sponsors"}
               </Button>
             </div>
           </div>

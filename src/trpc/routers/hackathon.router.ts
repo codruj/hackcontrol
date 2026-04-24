@@ -167,6 +167,7 @@ export const hackathonRouter = createTRPCRouter({
           organizers: true,
           judges_info: true,
           timeline: true,
+          sponsors: true,
           url: true,
           is_finished: true,
           updatedAt: true,
@@ -313,6 +314,7 @@ export const hackathonRouter = createTRPCRouter({
           organizers: input.organizers,
           judges_info: input.judges_info,
           timeline: input.timeline,
+          sponsors: input.sponsors ?? [],
           is_finished: input.is_finished,
         },
       });

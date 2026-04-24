@@ -8,7 +8,9 @@ import { ArrowLeft, Trophy } from "@/ui/icons";
 import { ButtonStyles } from "@/ui/button";
 import clsx from "clsx";
 
-type TabId = "overview" | "timeline" | "rules" | "prizes" | "people";
+type TabId = "overview" | "timeline" | "rules" | "prizes" | "people" | "sponsors";
+
+type Sponsor = { name: string; logo?: string; website?: string };
 
 interface Tab {
   id: TabId;
@@ -68,6 +70,10 @@ export default function PublicHackathonPage() {
   const judges: { user: { name: string | null; username: string | null; image: string | null } }[] =
     (hackathon as any).Judge ?? [];
 
+  const sponsors: Sponsor[] = Array.isArray((hackathon as any).sponsors)
+    ? ((hackathon as any).sponsors as Sponsor[]).filter((s) => s.name?.trim().length > 0)
+    : [];
+
   const tabs: Tab[] = [
     { id: "overview", label: "Overview" },
     ...(timeline.length > 0 ? [{ id: "timeline" as TabId, label: "Timeline" }] : []),
@@ -76,6 +82,7 @@ export default function PublicHackathonPage() {
     ...((hackathon as any).organizers || (hackathon as any).judges_info || judges.length > 0
       ? [{ id: "people" as TabId, label: "People" }]
       : []),
+    ...(sponsors.length > 0 ? [{ id: "sponsors" as TabId, label: "Sponsors" }] : []),
   ];
 
   return (
@@ -277,6 +284,38 @@ export default function PublicHackathonPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+            {/* Sponsors */}
+            {activeTab === "sponsors" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  {sponsors.map((sponsor, i) => (
+                    <div
+                      key={i}
+                      className="flex flex-col items-center gap-3 rounded-lg border border-neutral-800 p-4 text-center"
+                    >
+                      {sponsor.logo && (
+                        <img
+                          src={sponsor.logo}
+                          alt={sponsor.name}
+                          className="h-12 w-auto max-w-[120px] object-contain"
+                        />
+                      )}
+                      <p className="text-sm font-medium text-white">{sponsor.name}</p>
+                      {sponsor.website && (
+                        <a
+                          href={sponsor.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-400 hover:text-blue-300"
+                        >
+                          Visit website →
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
