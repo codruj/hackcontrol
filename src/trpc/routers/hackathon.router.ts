@@ -528,6 +528,11 @@ export const hackathonRouter = createTRPCRouter({
         where: {
           url: input.url,
         },
+        include: {
+          hackathonCategories: {
+            orderBy: { createdAt: "asc" },
+          },
+        },
       });
 
       let participants: any[] = [];

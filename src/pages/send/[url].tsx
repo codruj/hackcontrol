@@ -40,6 +40,7 @@ const Send = () => {
             name={data.hackathon.name}
             description={data.hackathon.description}
             is_finished={data.hackathon.is_finished}
+            categories={data.hackathon.hackathonCategories ?? []}
           />
         ) : (
           <div className="flex flex-col items-center justify-center">

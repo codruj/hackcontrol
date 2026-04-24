@@ -7,6 +7,7 @@ import { announcementRouter } from "./routers/announcement.router";
 import { judgeRouter } from "./routers/judge.router";
 import { scoringRouter } from "./routers/scoring.router";
 import { criteriaRouter } from "./routers/criteria.router";
+import { categoryRouter } from "./routers/category.router";
 
 export const appRouter = createTRPCRouter({
   hackathon: hackathonRouter,
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
   judge: judgeRouter,
   scoring: scoringRouter,
   criteria: criteriaRouter,
+  category: categoryRouter,
 });
 
 // export type definition of API

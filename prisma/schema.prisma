@@ -13,9 +13,9 @@ model Widget {
 }
 
 model Hackathon {
-  id                  String          @id @default(cuid())
+  id                  String               @id @default(cuid())
   name                String
-  url                 String          @unique
+  url                 String               @unique
   description         String?
   rules               String?
   criteria            String?
@@ -26,24 +26,25 @@ model Hackathon {
   judges_info         String?
   timeline            Json?
   creatorId           String
-  updatedAt           DateTime        @default(now()) @updatedAt
-  is_finished         Boolean         @default(false)
-  verified            Boolean         @default(false)
-  min_judges_required Int             @default(2)
+  updatedAt           DateTime             @default(now()) @updatedAt
+  is_finished         Boolean              @default(false)
+  verified            Boolean              @default(false)
+  min_judges_required Int                  @default(2)
   announcements       Announcement[]
-  owner               User            @relation(fields: [creatorId], references: [id])
+  owner               User                 @relation(fields: [creatorId], references: [id])
   Judge               Judge[]
   participations      Participation[]
   judgingCriteria     Criterion[]
+  hackathonCategories HackathonCategory[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
 }
 
 model Participation {
-  id             String    @id @default(cuid())
-  is_reviewed    Boolean   @default(false)
-  is_winner      Boolean   @default(false)
+  id             String             @id @default(cuid())
+  is_reviewed    Boolean            @default(false)
+  is_winner      Boolean            @default(false)
   title          String
   description    String
   project_url    String
@@ -51,12 +52,14 @@ model Participation {
   hackathon_url  String
   creatorId      String
   creatorName    String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
   team_members   Json?
-  createdBy      User      @relation(fields: [creatorId], references: [id])
-  hackathon      Hackathon @relation(fields: [hackathon_url], references: [url], onDelete: Cascade)
+  categoryId     String?
+  createdBy      User               @relation(fields: [creatorId], references: [id])
+  hackathon      Hackathon          @relation(fields: [hackathon_url], references: [url], onDelete: Cascade)
   scores         Score[]
+  category       HackathonCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@unique([creatorId, hackathon_url])
   @@map("participations")
@@ -154,19 +157,46 @@ model User {
 }
 
 model Judge {
-  id          String    @id @default(cuid())
-  userId      String
-  hackathonId String
-  invitedBy   String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
-  inviter     User      @relation("JudgeInviter", fields: [invitedBy], references: [id])
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scores      Score[]
+  id              String          @id @default(cuid())
+  userId          String
+  hackathonId     String
+  invitedBy       String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  hackathon       Hackathon       @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  inviter         User            @relation("JudgeInviter", fields: [invitedBy], references: [id])
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scores          Score[]
+  judgeCategories JudgeCategory[]
 
   @@unique([userId, hackathonId])
   @@map("judges")
+}
+
+model HackathonCategory {
+  id             String          @id @default(cuid())
+  hackathonId    String
+  name           String
+  description    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  hackathon      Hackathon       @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  participations Participation[]
+  judgeCategories JudgeCategory[]
+
+  @@unique([hackathonId, name])
+  @@map("hackathon_categories")
+}
+
+model JudgeCategory {
+  id         String            @id @default(cuid())
+  judgeId    String
+  categoryId String
+  judge      Judge             @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  category   HackathonCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([judgeId, categoryId])
+  @@map("judge_categories")
 }
 
 model VerificationToken {

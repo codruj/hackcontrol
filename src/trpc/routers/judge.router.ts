@@ -5,12 +5,13 @@ export const judgeRouter = createTRPCRouter({
   //------
   // Add judge to hackathon (ORGANIZER/ADMIN only) =>
   addJudge: organizerProcedure
-    .input(z.object({ 
+    .input(z.object({
       hackathonId: z.string(),
-      userId: z.string() 
+      userId: z.string(),
+      categoryIds: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { hackathonId, userId } = input;
+      const { hackathonId, userId, categoryIds } = input;
       const inviterId = ctx.session.user.id;
 
       // Check if user can manage this hackathon (if not ADMIN)
@@ -39,7 +40,7 @@ export const judgeRouter = createTRPCRouter({
         throw new Error("User is already a judge for this hackathon");
       }
 
-      return ctx.prisma.judge.create({
+      const judge = await ctx.prisma.judge.create({
         data: {
           userId,
           hackathonId,
@@ -55,6 +56,19 @@ export const judgeRouter = createTRPCRouter({
           },
         },
       });
+
+      // Assign categories if specified
+      if (categoryIds && categoryIds.length > 0) {
+        await ctx.prisma.judgeCategory.createMany({
+          data: categoryIds.map((categoryId) => ({
+            judgeId: judge.id,
+            categoryId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return judge;
     }),
 
   //------
@@ -126,10 +140,66 @@ export const judgeRouter = createTRPCRouter({
               name: true,
             },
           },
+          judgeCategories: {
+            include: {
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: "asc",
         },
+      });
+    }),
+
+  //------
+  // Set category assignments for a judge (replaces existing) =>
+  setJudgeCategories: organizerProcedure
+    .input(z.object({
+      judgeId: z.string(),
+      hackathonId: z.string(),
+      categoryIds: z.array(z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { judgeId, hackathonId, categoryIds } = input;
+      const requesterId = ctx.session.user.id;
+
+      if (ctx.session.user.role !== "ADMIN") {
+        const hackathon = await ctx.prisma.hackathon.findUnique({
+          where: { id: hackathonId },
+          select: { creatorId: true },
+        });
+        if (!hackathon || hackathon.creatorId !== requesterId) {
+          throw new Error("Not authorized to manage this hackathon");
+        }
+      }
+
+      const judge = await ctx.prisma.judge.findUnique({
+        where: { id: judgeId },
+        select: { hackathonId: true },
+      });
+      if (!judge || judge.hackathonId !== hackathonId) {
+        throw new Error("Judge not found in this hackathon");
+      }
+
+      // Replace all category assignments
+      await ctx.prisma.judgeCategory.deleteMany({ where: { judgeId } });
+
+      if (categoryIds.length > 0) {
+        await ctx.prisma.judgeCategory.createMany({
+          data: categoryIds.map((categoryId) => ({ judgeId, categoryId })),
+          skipDuplicates: true,
+        });
+      }
+
+      return ctx.prisma.judgeCategory.findMany({
+        where: { judgeId },
+        include: { category: { select: { id: true, name: true } } },
       });
     }),
 
