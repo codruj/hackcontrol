@@ -26,6 +26,7 @@ model Hackathon {
   judges_info         String?
   timeline            Json?
   sponsors            Json?
+  sponsors_text       String?
   creatorId           String
   updatedAt           DateTime             @default(now()) @updatedAt
   is_finished         Boolean              @default(false)

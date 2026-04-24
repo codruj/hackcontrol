@@ -120,6 +120,7 @@ const DashUrl = () => {
               judges_info={(hackathon as any).judges_info || undefined}
               timeline={(hackathon as any).timeline || undefined}
               sponsors={(hackathon as any).sponsors || undefined}
+              sponsors_text={(hackathon as any).sponsors_text || undefined}
               is_finished={hackathon.is_finished}
             />
           </div>

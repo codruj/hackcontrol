@@ -33,6 +33,7 @@ export const newHackathonSchema = z.object({
   judges_info: z.string().max(2000).optional(),
   timeline: z.array(z.string()).max(10).optional(),
   sponsors: z.array(z.object({ name: z.string(), logo: z.string().optional(), website: z.string().optional() })).optional(),
+  sponsors_text: z.string().max(2000).optional(),
   is_finished: z.boolean(),
 });
 
@@ -54,6 +55,7 @@ export const updateHackathonSchema = z.object({
   judges_info: z.string().max(2000).optional(),
   timeline: z.array(z.string()).max(10).optional(),
   sponsors: z.array(z.object({ name: z.string(), logo: z.string().optional(), website: z.string().optional() })).optional(),
+  sponsors_text: z.string().max(2000).optional(),
   is_finished: z.boolean(),
 });
 

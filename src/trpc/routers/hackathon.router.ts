@@ -315,6 +315,7 @@ export const hackathonRouter = createTRPCRouter({
           judges_info: input.judges_info,
           timeline: input.timeline,
           sponsors: input.sponsors ?? [],
+          sponsors_text: input.sponsors_text,
           is_finished: input.is_finished,
         },
       });

@@ -59,6 +59,7 @@ const EditHackathon = (props: EditHackathonProps) => {
       categories: props.categories,
       organizers: props.organizers,
       judges_info: props.judges_info,
+      sponsors_text: props.sponsors_text,
     },
   });
 
@@ -402,6 +403,25 @@ const EditHackathon = (props: EditHackathonProps) => {
                 })}
               />
               {errors.matchmaking && <Alert>{errors.matchmaking?.message}</Alert>}
+            </div>
+            <div className="mb-6">
+              <label htmlFor="sponsors_text">Sponsors:</label>
+              <textarea
+                id="sponsors_text"
+                defaultValue={props.sponsors_text || ""}
+                className={inputStyles}
+                placeholder="List sponsors (max 2000 characters)"
+                rows={3}
+                autoComplete="off"
+                disabled={loading}
+                {...register("sponsors_text", {
+                  maxLength: {
+                    value: 2000,
+                    message: "Sponsors must be less than 2000 characters",
+                  },
+                })}
+              />
+              {errors.sponsors_text && <Alert>{errors.sponsors_text?.message}</Alert>}
             </div>
             <div className="flex flex-row-reverse">
               <Button
