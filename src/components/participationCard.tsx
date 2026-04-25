@@ -43,9 +43,10 @@ interface ParticipationCardProps {
   isJudging?: boolean;
   hackathonId?: string;
   isHackathonFinished?: boolean;
+  categoryName?: string;
 }
 
-const ParticipationCard = ({ participation: props, criteria = [], isJudging = false, hackathonId, isHackathonFinished = false }: ParticipationCardProps) => {
+const ParticipationCard = ({ participation: props, criteria = [], isJudging = false, hackathonId, isHackathonFinished = false, categoryName }: ParticipationCardProps) => {
   const [winner, setWinner] = useState<boolean>();
   const [reviewed, setReviewed] = useState<boolean>();
   const [showScoringModal, setShowScoringModal] = useState(false);
@@ -148,9 +149,16 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
       <div className="w-full p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="text-md font-bold tracking-tight text-gray-900 dark:text-white md:text-xl">
-              {props.title}
-            </h3>
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <h3 className="text-md font-bold tracking-tight text-gray-900 dark:text-white md:text-xl">
+                {props.title}
+              </h3>
+              {categoryName && (
+                <span className="rounded-full bg-neutral-700 px-2.5 py-0.5 text-xs font-medium text-neutral-300">
+                  {categoryName}
+                </span>
+              )}
+            </div>
             <span className="font-mono font-bold text-gray-500">
               {props.creatorName}
             </span>
@@ -258,6 +266,7 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
                 title={props.title}
                 description={props.description}
                 project_url={props.project_url}
+                categoryName={categoryName}
               />
             </>
           ) : (
@@ -281,6 +290,7 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
                 title={props.title}
                 description={props.description}
                 project_url={props.project_url}
+                categoryName={categoryName}
               />
             </>
           )}

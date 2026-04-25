@@ -374,6 +374,9 @@ export const hackathonRouter = createTRPCRouter({
           hackathon_url: input.url,
         },
         include: {
+          category: {
+            select: { name: true },
+          },
           scores: {
             include: {
               judge: {
@@ -590,18 +593,24 @@ export const hackathonRouter = createTRPCRouter({
       }
 
       const userId = ctx.session.user.id;
-      
-      // Check if user can judge this hackathon
-      const canJudge = ctx.session.user.role === "ADMIN" ||
-        hackathon.creatorId === userId ||
-        await ctx.prisma.judge.findUnique({
-          where: {
-            userId_hackathonId: {
-              userId,
-              hackathonId: hackathon.id,
-            },
+
+      // Fetch judge record with category assignments in one query
+      const judgeRecord = await ctx.prisma.judge.findUnique({
+        where: {
+          userId_hackathonId: {
+            userId,
+            hackathonId: hackathon.id,
           },
-        });
+        },
+        include: {
+          judgeCategories: true,
+        },
+      });
+
+      const canJudge =
+        ctx.session.user.role === "ADMIN" ||
+        hackathon.creatorId === userId ||
+        !!judgeRecord;
 
       if (!canJudge) {
         return {
@@ -611,12 +620,22 @@ export const hackathonRouter = createTRPCRouter({
         };
       }
 
+      // If the judge has explicit category assignments, only show those categories' submissions
+      const categoryFilter =
+        judgeRecord && judgeRecord.judgeCategories.length > 0
+          ? { categoryId: { in: judgeRecord.judgeCategories.map((jc) => jc.categoryId) } }
+          : {};
+
       // Get participants for this hackathon with scores
       const participants = await ctx.prisma.participation.findMany({
         where: {
           hackathon_url: input.url,
+          ...categoryFilter,
         },
         include: {
+          category: {
+            select: { name: true },
+          },
           scores: {
             include: {
               judge: {

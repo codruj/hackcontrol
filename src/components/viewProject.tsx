@@ -6,6 +6,7 @@ interface ViewProjectProps {
   title: string;
   description: string;
   project_url: string;
+  categoryName?: string;
 }
 
 const ViewProject = (props: ViewProjectProps) => {
@@ -16,6 +17,11 @@ const ViewProject = (props: ViewProjectProps) => {
     >
       <div className="flex flex-col items-center justify-center space-y-3">
         <div className="w-full border-b border-neutral-800 pb-3">
+          {props.categoryName && (
+            <span className="mb-2 inline-block rounded-full bg-neutral-700 px-2.5 py-0.5 text-xs font-medium text-neutral-300">
+              {props.categoryName}
+            </span>
+          )}
           <p>{props.description}</p>
         </div>
         <Input value={props.project_url} disabled />

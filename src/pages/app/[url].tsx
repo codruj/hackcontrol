@@ -166,6 +166,7 @@ const DashUrl = () => {
                       isJudging={ownerJudgeStatus?.isJudge || false}
                       hackathonId={hackathon.id}
                       isHackathonFinished={hackathon.is_finished}
+                      categoryName={(participant as any).category?.name}
                     />
                   ))}
               </div>
@@ -221,6 +222,7 @@ const DashUrl = () => {
                       isJudging={true}
                       hackathonId={hackathon.id}
                       isHackathonFinished={hackathon.is_finished}
+                      categoryName={(participant as any).category?.name}
                     />
                   ))}
               </div>

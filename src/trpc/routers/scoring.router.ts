@@ -105,7 +105,7 @@ export const scoringRouter = createTRPCRouter({
         throw new Error("Not authorized to judge this hackathon");
       }
 
-      // Find the judge record to get judgeId
+      // Find the judge record with category assignments
       const judge = await ctx.prisma.judge.findUnique({
         where: {
           userId_hackathonId: {
@@ -113,10 +113,21 @@ export const scoringRouter = createTRPCRouter({
             hackathonId,
           },
         },
+        include: {
+          judgeCategories: true,
+        },
       });
 
       if (!judge) {
         throw new Error("Judge record not found");
+      }
+
+      // If judge has category restrictions, verify this participation belongs to one of them
+      if (judge.judgeCategories.length > 0) {
+        const allowedCategoryIds = judge.judgeCategories.map((jc) => jc.categoryId);
+        if (!participation.categoryId || !allowedCategoryIds.includes(participation.categoryId)) {
+          throw new Error("Not authorized to judge projects outside your assigned categories");
+        }
       }
 
       // Per-criterion scoring
