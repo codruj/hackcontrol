@@ -32,7 +32,7 @@ const DashUrl = () => {
         url: url as string,
       },
       {
-        enabled: !!publicData?.isOwner && (session?.user?.role === "ADMIN" || session?.user?.role === "ORGANIZER"),
+        enabled: session?.user?.role === "ADMIN" || (!!publicData?.isOwner && session?.user?.role === "ORGANIZER"),
       },
     );
 
@@ -53,7 +53,7 @@ const DashUrl = () => {
         url: url as string,
       },
       {
-        enabled: !!session?.user && !publicData?.isOwner,
+        enabled: !!session?.user && !publicData?.isOwner && session?.user?.role !== "ADMIN",
       },
     );
 

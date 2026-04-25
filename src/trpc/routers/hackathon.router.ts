@@ -462,8 +462,9 @@ export const hackathonRouter = createTRPCRouter({
 
       // Check if current user is the owner
       const isOwner =
-        ctx.session?.user?.id === hackathon.creatorId &&
-        (ctx.session?.user?.role === "ADMIN" || ctx.session?.user?.role === "ORGANIZER");
+        ctx.session?.user?.role === "ADMIN" ||
+        (ctx.session?.user?.id === hackathon.creatorId &&
+          ctx.session?.user?.role === "ORGANIZER");
 
       // Get user's participation if logged in
       let userParticipation = null;
