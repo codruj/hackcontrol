@@ -71,6 +71,7 @@ const SendProject = (hackathonProps: iSendProject) => {
         title: data.title,
         description: data.description,
         project_url: data.project_url,
+        ...(data.presentation_url ? { presentation_url: data.presentation_url } : {}),
         hackathon_url: hackathonProps.url,
         hackathon_name: hackathonProps.name,
         ...(hasCategories && selectedCategoryId ? { categoryId: selectedCategoryId } : {}),
@@ -179,20 +180,35 @@ const SendProject = (hackathonProps: iSendProject) => {
             {errors.description && <Alert>{errors.description?.message}</Alert>}
           </div>
           <div className="mt-4">
-            <label htmlFor="project_url">Url:</label>
+            <label htmlFor="project_url">GitHub Repository:</label>
             <input
               id="project_url"
               className={inputStyles}
-              placeholder="https://"
+              placeholder="https://github.com/..."
               {...register("project_url", {
-                required: "URL is required",
+                required: "GitHub repository URL is required",
                 pattern: {
                   value: /^(http|https):\/\/[^ "]+$/,
-                  message: "The url must start with http:// or https://",
+                  message: "The URL must start with http:// or https://",
                 },
               })}
             />
             {errors.project_url && <Alert>{errors.project_url?.message}</Alert>}
+          </div>
+          <div className="mt-4">
+            <label htmlFor="presentation_url">Presentation (optional):</label>
+            <input
+              id="presentation_url"
+              className={inputStyles}
+              placeholder="https://"
+              {...register("presentation_url", {
+                pattern: {
+                  value: /^(http|https):\/\/[^ "]+$/,
+                  message: "The URL must start with http:// or https://",
+                },
+              })}
+            />
+            {errors.presentation_url && <Alert>{errors.presentation_url?.message}</Alert>}
           </div>
           {isTeamSubmission && (
             <div className="mt-4 space-y-4">

@@ -5,6 +5,7 @@ export type TParticipation = {
   title: string;
   description: string;
   project_url: string;
+  presentation_url?: string;
   hackathon_url: string;
   hackathon_name: string;
   team_members?: {

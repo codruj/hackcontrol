@@ -50,6 +50,7 @@ model Participation {
   title          String
   description    String
   project_url    String
+  presentation_url String?
   hackathon_name String
   hackathon_url  String
   creatorId      String

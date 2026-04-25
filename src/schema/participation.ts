@@ -27,6 +27,7 @@ export const newParticipationSchema = z.object({
   hackathon_url: z.string(),
   hackathon_name: z.string(),
   project_url: z.string(),
+  presentation_url: z.string().optional(),
   categoryId: z.string().optional(),
   team_members: z.object({
     team_name: z.string().optional(),

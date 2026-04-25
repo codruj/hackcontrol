@@ -6,6 +6,7 @@ interface ViewProjectProps {
   title: string;
   description: string;
   project_url: string;
+  presentation_url?: string | null;
   categoryName?: string;
 }
 
@@ -30,9 +31,22 @@ const ViewProject = (props: ViewProjectProps) => {
           className={`w-full ${ButtonStyles}`}
         >
           <div className="flex w-full items-center justify-center space-x-2">
-            <span>View Project</span>
+            <span>View GitHub Repository</span>
           </div>
         </ExternalLink>
+        {props.presentation_url && (
+          <>
+            <Input value={props.presentation_url} disabled />
+            <ExternalLink
+              href={props.presentation_url}
+              className={`w-full ${ButtonStyles}`}
+            >
+              <div className="flex w-full items-center justify-center space-x-2">
+                <span>View Presentation</span>
+              </div>
+            </ExternalLink>
+          </>
+        )}
         <p className="text-gray-400">
           The link that you will see below does not belong to Project Hackathon
           and may not be secure.

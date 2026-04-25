@@ -266,6 +266,7 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
                 title={props.title}
                 description={props.description}
                 project_url={props.project_url}
+                presentation_url={(props as any).presentation_url}
                 categoryName={categoryName}
               />
             </>
@@ -290,6 +291,7 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
                 title={props.title}
                 description={props.description}
                 project_url={props.project_url}
+                presentation_url={(props as any).presentation_url}
                 categoryName={categoryName}
               />
             </>
