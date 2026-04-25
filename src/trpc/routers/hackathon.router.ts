@@ -182,6 +182,10 @@ export const hackathonRouter = createTRPCRouter({
               },
             },
           },
+          hackathonCategories: {
+            select: { id: true, name: true },
+            orderBy: { createdAt: "asc" as const },
+          },
         },
       });
 
@@ -189,6 +193,7 @@ export const hackathonRouter = createTRPCRouter({
         return {
           hackathon: null,
           winners: [],
+          categoryWinners: [],
         };
       }
 
@@ -202,42 +207,55 @@ export const hackathonRouter = createTRPCRouter({
         },
       });
 
-      // Calculate rankings and get top 3
-      const ranked = participations
-        .map((participation) => {
-          const scores = participation.scores;
-          const totalScores = scores.length;
-          const averageScore = totalScores > 0
-            ? scores.reduce((sum, s) => sum + s.score, 0) / totalScores
-            : 0;
+      const rankSubset = (subset: typeof participations) =>
+        subset
+          .map((participation) => {
+            const scores = participation.scores;
+            const totalScores = scores.length;
+            const averageScore =
+              totalScores > 0
+                ? scores.reduce((sum, s) => sum + s.score, 0) / totalScores
+                : 0;
+            return {
+              id: participation.id,
+              title: participation.title,
+              description: participation.description,
+              project_url: participation.project_url,
+              creatorName: participation.creatorName,
+              averageScore,
+              totalScores,
+              isEligibleForRanking: totalScores >= hackathon.min_judges_required,
+            };
+          })
+          .filter((p) => p.isEligibleForRanking)
+          .sort((a, b) =>
+            b.averageScore !== a.averageScore
+              ? b.averageScore - a.averageScore
+              : b.totalScores - a.totalScores,
+          )
+          .slice(0, 3)
+          .map((submission, index) => ({ ...submission, rank: index + 1 }));
 
-          return {
-            id: participation.id,
-            title: participation.title,
-            description: participation.description,
-            project_url: participation.project_url,
-            creatorName: participation.creatorName,
-            averageScore,
-            totalScores,
-            isEligibleForRanking: totalScores >= hackathon.min_judges_required,
-          };
-        })
-        .filter(p => p.isEligibleForRanking)
-        .sort((a, b) => {
-          if (b.averageScore !== a.averageScore) {
-            return b.averageScore - a.averageScore;
-          }
-          return b.totalScores - a.totalScores;
-        })
-        .slice(0, 3)
-        .map((submission, index) => ({
-          ...submission,
-          rank: index + 1,
+      if (hackathon.hackathonCategories.length > 0) {
+        const categoryWinners = hackathon.hackathonCategories.map((category) => ({
+          categoryId: category.id,
+          categoryName: category.name,
+          winners: rankSubset(
+            participations.filter((p) => p.categoryId === category.id),
+          ),
         }));
+
+        return {
+          hackathon,
+          winners: [],
+          categoryWinners,
+        };
+      }
 
       return {
         hackathon,
-        winners: ranked,
+        winners: rankSubset(participations),
+        categoryWinners: [],
       };
     }),
 
@@ -702,24 +720,32 @@ export const hackathonRouter = createTRPCRouter({
         orderBy: { order: "asc" },
       });
 
-      const ranked = participations
-        .map((participation) => {
-          const { averageScore, completeJudges } = computeWeightedScore(
-            participation.scores,
-            criteria,
+      const hackathonCategories = await ctx.prisma.hackathonCategory.findMany({
+        where: { hackathonId: hackathon.id },
+      });
+
+      const rankAll = (subset: typeof participations) =>
+        subset
+          .map((participation) => {
+            const { averageScore, completeJudges } = computeWeightedScore(
+              participation.scores,
+              criteria,
+            );
+            return {
+              ...participation,
+              averageScore,
+              totalScores: completeJudges,
+              isEligibleForRanking: completeJudges >= hackathon.min_judges_required,
+            };
+          })
+          .filter((p) => p.isEligibleForRanking)
+          .sort((a, b) =>
+            b.averageScore !== a.averageScore
+              ? b.averageScore - a.averageScore
+              : b.totalScores - a.totalScores,
           );
-          return {
-            ...participation,
-            averageScore,
-            totalScores: completeJudges,
-            isEligibleForRanking: completeJudges >= hackathon.min_judges_required,
-          };
-        })
-        .filter(p => p.isEligibleForRanking)
-        .sort((a, b) => {
-          if (b.averageScore !== a.averageScore) return b.averageScore - a.averageScore;
-          return b.totalScores - a.totalScores;
-        });
+
+      const ranked = rankAll(participations);
 
       // Clear all existing winners first
       await ctx.prisma.participation.updateMany({
@@ -728,22 +754,29 @@ export const hackathonRouter = createTRPCRouter({
         },
         data: {
           is_winner: false,
-          is_reviewed: true, // Mark all as reviewed when hackathon finishes
+          is_reviewed: true,
         },
       });
 
-      // Set the top submission as winner (if any eligible submissions exist)
-      if (ranked.length > 0) {
-        const winner = ranked[0];
-        await ctx.prisma.participation.update({
-          where: {
-            id: winner.id,
-          },
-          data: {
-            is_winner: true,
-            is_reviewed: true,
-          },
-        });
+      if (hackathonCategories.length > 0) {
+        // Mark one winner per category
+        for (const category of hackathonCategories) {
+          const categoryWinner = ranked.find((p) => p.categoryId === category.id);
+          if (categoryWinner) {
+            await ctx.prisma.participation.update({
+              where: { id: categoryWinner.id },
+              data: { is_winner: true, is_reviewed: true },
+            });
+          }
+        }
+      } else {
+        // Global winner for hackathons with no categories
+        if (ranked.length > 0) {
+          await ctx.prisma.participation.update({
+            where: { id: ranked[0].id },
+            data: { is_winner: true, is_reviewed: true },
+          });
+        }
       }
 
       // Finish the hackathon
@@ -758,14 +791,8 @@ export const hackathonRouter = createTRPCRouter({
 
       return {
         ...finishHackathon,
-        winnersCount: ranked.length > 0 ? 1 : 0,
+        winnersCount: hackathonCategories.length > 0 ? hackathonCategories.length : (ranked.length > 0 ? 1 : 0),
         totalEligibleSubmissions: ranked.length,
-        winnerSubmission: ranked.length > 0 ? {
-          title: ranked[0].title,
-          creatorName: ranked[0].creatorName,
-          averageScore: ranked[0].averageScore,
-          totalJudges: ranked[0].totalScores,
-        } : null,
       };
     }),
 });

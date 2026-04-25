@@ -61,7 +61,7 @@ export default function PublicHackathonPage() {
     );
   }
 
-  const { hackathon, winners } = data;
+  const { hackathon, winners, categoryWinners } = data;
 
   const timeline = Array.isArray((hackathon as any).timeline)
     ? ((hackathon as any).timeline as string[]).filter((s: string) => s.trim().length > 0)
@@ -320,7 +320,7 @@ export default function PublicHackathonPage() {
             )}
           </div>
 
-          {/* Winners section — unchanged */}
+          {/* Winners section */}
           <div>
             <div className="mb-4 flex items-center space-x-2">
               <Trophy width={24} className="text-yellow-500" />
@@ -333,6 +333,58 @@ export default function PublicHackathonPage() {
                 <p className="mt-2 text-gray-400">
                   Stay tuned for the winners once the hackathon concludes.
                 </p>
+              </div>
+            ) : categoryWinners && categoryWinners.length > 0 ? (
+              <div className="space-y-8">
+                {categoryWinners.map((cat) => (
+                  <div key={cat.categoryId}>
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
+                      {cat.categoryName}
+                    </h3>
+                    {cat.winners.length > 0 ? (
+                      <div className="space-y-3">
+                        {cat.winners.map((winner) => (
+                          <div
+                            key={winner.id}
+                            className={clsx(
+                              "rounded-md p-4 transition-all",
+                              winner.rank === 1
+                                ? "border border-yellow-600 border-opacity-30 bg-yellow-600 bg-opacity-20"
+                                : winner.rank === 2
+                                ? "border border-gray-400 border-opacity-30 bg-gray-400 bg-opacity-20"
+                                : "border border-orange-700 border-opacity-30 bg-orange-700 bg-opacity-20"
+                            )}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <span className="text-2xl">{getPodiumIcon(winner.rank)}</span>
+                              <div>
+                                <h4 className="text-lg font-medium">{winner.title}</h4>
+                                <p className="text-sm text-gray-400">by {winner.creatorName}</p>
+                              </div>
+                            </div>
+                            {winner.description && (
+                              <p className="mt-3 text-sm text-gray-300">{winner.description}</p>
+                            )}
+                            {winner.project_url && (
+                              <a
+                                href={winner.project_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 inline-block text-sm text-blue-400 hover:text-blue-300"
+                              >
+                                View Project →
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-md bg-white bg-opacity-5 p-4 text-center">
+                        <p className="text-sm text-gray-400">No eligible submissions in this category.</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : winners.length > 0 ? (
               <div className="space-y-4">
