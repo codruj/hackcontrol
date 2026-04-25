@@ -54,10 +54,9 @@ export const hackathonRouter = createTRPCRouter({
     // For ADMIN/ORGANIZER users: show only their created hackathons
     // For USER users: show all available hackathons
     if (ctx.session.user.role === "ADMIN" || ctx.session.user.role === "ORGANIZER") {
+      const isAdmin = ctx.session.user.role === "ADMIN";
       const hackathon = await ctx.prisma.hackathon.findMany({
-        where: {
-          creatorId: ctx.session.user.id,
-        },
+        where: isAdmin ? {} : { creatorId: ctx.session.user.id },
       });
       const participants = await ctx.prisma.participation.findMany({
         where: {
@@ -285,11 +284,11 @@ export const hackathonRouter = createTRPCRouter({
   editHackathon: organizerProcedure
     .input(updateHackathonSchema)
     .mutation(async ({ ctx, input }) => {
-      // First check if the user is the creator
+      const isAdmin = ctx.session.user.role === "ADMIN";
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: {
           id: input.id,
-          creatorId: ctx.session.user.id,
+          ...(isAdmin ? {} : { creatorId: ctx.session.user.id }),
         },
       });
 
@@ -327,11 +326,11 @@ export const hackathonRouter = createTRPCRouter({
   deleteHackathon: organizerProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // First check if the user is the creator
+      const isAdmin = ctx.session.user.role === "ADMIN";
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: {
           id: input.id,
-          creatorId: ctx.session.user.id,
+          ...(isAdmin ? {} : { creatorId: ctx.session.user.id }),
         },
       });
 
@@ -354,10 +353,11 @@ export const hackathonRouter = createTRPCRouter({
   getHackathonManagement: organizerProcedure
     .input(z.object({ url: z.string() }))
     .query(async ({ ctx, input }) => {
+      const isAdmin = ctx.session.user.role === "ADMIN";
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: {
           url: input.url,
-          creatorId: ctx.session.user.id,
+          ...(isAdmin ? {} : { creatorId: ctx.session.user.id }),
         },
       });
 
@@ -488,7 +488,6 @@ export const hackathonRouter = createTRPCRouter({
   singleHackathonWithParticipants: protectedProcedure
     .input(z.object({ url: z.string() }))
     .query(async ({ ctx, input }) => {
-      // This should only work for hackathon creators
       if (ctx.session.user.role !== "ADMIN" && ctx.session.user.role !== "ORGANIZER") {
         return {
           hackathon: null,
@@ -496,10 +495,11 @@ export const hackathonRouter = createTRPCRouter({
         };
       }
 
+      const isAdmin = ctx.session.user.role === "ADMIN";
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: {
           url: input.url,
-          creatorId: ctx.session.user.id,
+          ...(isAdmin ? {} : { creatorId: ctx.session.user.id }),
         },
       });
 
@@ -653,11 +653,11 @@ export const hackathonRouter = createTRPCRouter({
   finishHackathon: organizerProcedure
     .input(z.object({ url: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // First check if the user is the creator
+      const isAdmin = ctx.session.user.role === "ADMIN";
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: {
           url: input.url,
-          creatorId: ctx.session.user.id,
+          ...(isAdmin ? {} : { creatorId: ctx.session.user.id }),
         },
       });
 
