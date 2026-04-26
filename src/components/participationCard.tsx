@@ -50,6 +50,7 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
   const [winner, setWinner] = useState<boolean>();
   const [reviewed, setReviewed] = useState<boolean>();
   const [showScoringModal, setShowScoringModal] = useState(false);
+  const [selectedJudgeBreakdown, setSelectedJudgeBreakdown] = useState<string | "all" | null>(null);
   const router = useRouter();
 
   const { mutate } = api.participation.updateParticipation.useMutation({
@@ -213,39 +214,127 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
         </p>
 
         {/* Individual scores display for judges, owners and admins */}
-        {scores.length > 0 && (
-          <div className="mb-4 space-y-1">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Scores:</p>
-            <div className="flex flex-wrap gap-2">
-              {hasCriteria
-                ? Array.from(new Set(scores.filter((s) => s.criterionId).map((s) => s.judge.id))).map((judgeId) => {
-                    const judgeScores = scores.filter((s) => s.judge.id === judgeId && s.criterionId);
-                    const judgeInfo = judgeScores[0]?.judge;
-                    if (!judgeInfo || judgeScores.length < criteria.length) return null;
-                    const weighted = criteria.reduce(
-                      (sum, c) => sum + (judgeScores.find((s) => s.criterionId === c.id)?.score ?? 0) * (c.weight / 100),
-                      0,
-                    );
-                    return (
+        {scores.length > 0 && (() => {
+          const completeJudgeIds = Array.from(
+            new Set(scores.filter((s) => s.criterionId).map((s) => s.judge.id)),
+          ).filter((judgeId) =>
+            scores.filter((s) => s.judge.id === judgeId && s.criterionId).length >= criteria.length,
+          );
+
+          return (
+            <div className="mb-4 space-y-2">
+              <p className="text-sm font-semibold text-gray-300">Scores:</p>
+              <div className="flex flex-wrap gap-2">
+                {hasCriteria && completeJudgeIds.length > 0 && (
+                  <button
+                    onClick={() => setSelectedJudgeBreakdown(selectedJudgeBreakdown === "all" ? null : "all")}
+                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      selectedJudgeBreakdown === "all"
+                        ? "border-neutral-400 bg-neutral-600 text-white"
+                        : "border-neutral-600 bg-neutral-800 text-neutral-300 hover:border-neutral-400"
+                    }`}
+                  >
+                    All
+                  </button>
+                )}
+                {hasCriteria
+                  ? completeJudgeIds.map((judgeId) => {
+                      const judgeScores = scores.filter((s) => s.judge.id === judgeId && s.criterionId);
+                      const judgeInfo = judgeScores[0]?.judge;
+                      if (!judgeInfo) return null;
+                      const weighted = criteria.reduce(
+                        (sum, c) => sum + (judgeScores.find((s) => s.criterionId === c.id)?.score ?? 0) * (c.weight / 100),
+                        0,
+                      );
+                      const isSelected = selectedJudgeBreakdown === judgeId;
+                      return (
+                        <button
+                          key={judgeId}
+                          onClick={() => setSelectedJudgeBreakdown(isSelected ? null : judgeId)}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                            isSelected
+                              ? "border-blue-500 bg-blue-900 text-blue-200"
+                              : "border-transparent bg-blue-900/40 text-blue-300 hover:border-blue-500"
+                          }`}
+                        >
+                          {judgeInfo.user.name || judgeInfo.user.username || "Judge"}: {weighted.toFixed(2)}/10
+                        </button>
+                      );
+                    })
+                  : scores.filter((s) => !s.criterionId).map((score, index) => (
                       <span
-                        key={judgeId}
-                        className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                        key={index}
+                        className="inline-flex items-center rounded-full bg-blue-900/40 px-2.5 py-0.5 text-xs font-medium text-blue-300"
                       >
-                        {judgeInfo.user.name || judgeInfo.user.username || 'Judge'}: {weighted.toFixed(2)}/10
+                        {score.judge.user.name || score.judge.user.username || "Judge"}: {score.score}/10
                       </span>
-                    );
-                  })
-                : scores.filter((s) => !s.criterionId).map((score, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                    >
-                      {score.judge.user.name || score.judge.user.username || 'Judge'}: {score.score}/10
-                    </span>
-                  ))}
+                    ))}
+              </div>
+
+              {/* Per-criterion breakdown panel */}
+              {hasCriteria && selectedJudgeBreakdown && (
+                <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-3">
+                  {selectedJudgeBreakdown === "all" ? (
+                    <div className="space-y-1.5">
+                      <p className="mb-2 text-xs text-neutral-400">Average per criterion — all judges:</p>
+                      {criteria.map((c) => {
+                        const criterionScores = scores.filter(
+                          (s) => s.criterionId === c.id && completeJudgeIds.includes(s.judge.id),
+                        );
+                        const avg =
+                          criterionScores.length > 0
+                            ? criterionScores.reduce((sum, s) => sum + s.score, 0) / criterionScores.length
+                            : null;
+                        return (
+                          <div key={c.id} className="flex items-center justify-between">
+                            <span className="text-xs text-neutral-300">
+                              {c.name}{" "}
+                              <span className="text-neutral-500">({c.weight}%)</span>
+                            </span>
+                            <span className="font-mono text-xs text-white">
+                              {avg !== null ? `${avg.toFixed(1)}/10` : "—"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {(() => {
+                        const judgeScores = scores.filter(
+                          (s) => s.judge.id === selectedJudgeBreakdown && s.criterionId,
+                        );
+                        const judgeName =
+                          judgeScores[0]?.judge.user.name ||
+                          judgeScores[0]?.judge.user.username ||
+                          "Judge";
+                        return (
+                          <>
+                            <p className="mb-2 text-xs text-neutral-400">{judgeName}'s scores:</p>
+                            {criteria.map((c) => {
+                              const score = judgeScores.find((s) => s.criterionId === c.id);
+                              return (
+                                <div key={c.id} className="flex items-center justify-between">
+                                  <span className="text-xs text-neutral-300">
+                                    {c.name}{" "}
+                                    <span className="text-neutral-500">({c.weight}%)</span>
+                                  </span>
+                                  <span className="font-mono text-xs text-white">
+                                    {score ? `${score.score}/10` : "—"}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
         
         <div className="flex w-full items-center justify-end space-x-2 overflow-x-auto">
           {isJudging ? (
