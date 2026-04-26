@@ -197,25 +197,29 @@ export const hackathonRouter = createTRPCRouter({
         };
       }
 
-      // Get all participations with their scores
-      const participations = await ctx.prisma.participation.findMany({
-        where: {
-          hackathon_url: input.url,
-        },
-        include: {
-          scores: true,
-        },
-      });
+      // Get all participations with their scores and criteria for correct weighted ranking
+      const [participations, criteria] = await Promise.all([
+        ctx.prisma.participation.findMany({
+          where: { hackathon_url: input.url },
+          include: { scores: true },
+        }),
+        ctx.prisma.criterion.findMany({
+          where: { hackathonId: hackathon.id },
+          orderBy: { order: "asc" },
+        }),
+      ]);
 
       const rankSubset = (subset: typeof participations) =>
         subset
           .map((participation) => {
-            const scores = participation.scores;
-            const totalScores = scores.length;
-            const averageScore =
-              totalScores > 0
-                ? scores.reduce((sum, s) => sum + s.score, 0) / totalScores
-                : 0;
+            const { averageScore, completeJudges } = computeWeightedScore(
+              participation.scores.map((s) => ({
+                judgeId: s.judgeId,
+                criterionId: s.criterionId,
+                score: s.score,
+              })),
+              criteria,
+            );
             return {
               id: participation.id,
               title: participation.title,
@@ -223,8 +227,8 @@ export const hackathonRouter = createTRPCRouter({
               project_url: participation.project_url,
               creatorName: participation.creatorName,
               averageScore,
-              totalScores,
-              isEligibleForRanking: totalScores >= hackathon.min_judges_required,
+              totalScores: completeJudges,
+              isEligibleForRanking: completeJudges >= hackathon.min_judges_required,
             };
           })
           .filter((p) => p.isEligibleForRanking)
