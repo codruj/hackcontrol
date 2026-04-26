@@ -302,8 +302,8 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
       {/* Scoring Modal */}
       {showScoringModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center px-6 pt-6 pb-4 flex-shrink-0">
               <h3 className="text-xl font-semibold text-white">
                 Score Submission
               </h3>
@@ -316,15 +316,17 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
                 </svg>
               </button>
             </div>
-            <ScoringInterface
-              participationId={props.id}
-              title={props.title}
-              creatorName={props.creatorName}
-              currentScore={!hasCriteria ? currentUserScore : undefined}
-              criteria={criteria}
-              currentCriteriaScores={currentCriteriaScores}
-              onScoreSubmitted={handleScoreSubmitted}
-            />
+            <div className="overflow-y-auto px-6 pb-6">
+              <ScoringInterface
+                participationId={props.id}
+                title={props.title}
+                creatorName={props.creatorName}
+                currentScore={!hasCriteria ? currentUserScore : undefined}
+                criteria={criteria}
+                currentCriteriaScores={currentCriteriaScores}
+                onScoreSubmitted={handleScoreSubmitted}
+              />
+            </div>
           </div>
         </div>
       )}
