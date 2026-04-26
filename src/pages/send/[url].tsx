@@ -32,7 +32,7 @@ const Send = () => {
       <Head>
         <title>Send project: {data.hackathon.name} - Project Hackathon</title>
       </Head>
-      <div className="mx-auto flex h-screen flex-col items-center justify-center">
+      <div className="mx-auto flex min-h-screen flex-col items-center justify-center py-8">
         {data.participants.length === 0 ? (
           <SendProject
             id={data.hackathon.id}
