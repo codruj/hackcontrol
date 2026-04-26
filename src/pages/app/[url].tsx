@@ -46,6 +46,7 @@ const DashUrl = () => {
   const { url } = router.query;
   const { data: session } = useSession();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Get public hackathon data first
   const { data: publicData, isLoading: publicLoading } =
@@ -182,9 +183,21 @@ const DashUrl = () => {
           {managementData.participants && managementData.participants.length > 0 ? (
             (() => {
               const criteria = managementData.criteria ?? [];
-              const sorted = [...managementData.participants].sort(
-                (a, b) => computeAvgScore((b as any).scores, criteria) - computeAvgScore((a as any).scores, criteria),
-              );
+              const q = searchQuery.toLowerCase();
+              const sorted = [...managementData.participants]
+                .filter((p) => {
+                  if (!q) return true;
+                  const members = (p as any).team_members?.members ?? [];
+                  return (
+                    p.title.toLowerCase().includes(q) ||
+                    p.creatorName.toLowerCase().includes(q) ||
+                    ((p as any).team_members?.team_name ?? "").toLowerCase().includes(q) ||
+                    members.some((m: any) => m.name?.toLowerCase().includes(q))
+                  );
+                })
+                .sort(
+                  (a, b) => computeAvgScore((b as any).scores, criteria) - computeAvgScore((a as any).scores, criteria),
+                );
               const uniqueCategories = Array.from(
                 new Map(
                   sorted
@@ -202,6 +215,13 @@ const DashUrl = () => {
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-lg font-semibold">Submissions</h2>
                   </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by project name, creator or team member..."
+                    className="mb-4 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+                  />
                   {hasCategories && (
                     <div className="mb-6 flex flex-wrap gap-2">
                       <button
@@ -304,9 +324,21 @@ const DashUrl = () => {
           {judgeData.participants && judgeData.participants.length > 0 ? (
             (() => {
               const criteria = judgeData.criteria ?? [];
-              const sorted = [...judgeData.participants].sort(
-                (a, b) => computeAvgScore((b as any).scores, criteria) - computeAvgScore((a as any).scores, criteria),
-              );
+              const q = searchQuery.toLowerCase();
+              const sorted = [...judgeData.participants]
+                .filter((p) => {
+                  if (!q) return true;
+                  const members = (p as any).team_members?.members ?? [];
+                  return (
+                    p.title.toLowerCase().includes(q) ||
+                    p.creatorName.toLowerCase().includes(q) ||
+                    ((p as any).team_members?.team_name ?? "").toLowerCase().includes(q) ||
+                    members.some((m: any) => m.name?.toLowerCase().includes(q))
+                  );
+                })
+                .sort(
+                  (a, b) => computeAvgScore((b as any).scores, criteria) - computeAvgScore((a as any).scores, criteria),
+                );
               const uniqueCategories = Array.from(
                 new Map(
                   sorted
@@ -326,6 +358,13 @@ const DashUrl = () => {
                       Submissions to Review ({judgeData.participants.length})
                     </h2>
                   </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by project name, creator or team member..."
+                    className="mb-4 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+                  />
                   {hasCategories && (
                     <div className="mb-6 flex flex-wrap gap-2">
                       <button
