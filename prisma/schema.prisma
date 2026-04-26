@@ -29,9 +29,10 @@ model Hackathon {
   sponsors_text       String?
   creatorId           String
   updatedAt           DateTime             @default(now()) @updatedAt
-  is_finished         Boolean              @default(false)
-  verified            Boolean              @default(false)
-  min_judges_required Int                  @default(2)
+  is_finished              Boolean              @default(false)
+  verified                 Boolean              @default(false)
+  min_judges_required      Int                  @default(2)
+  max_winners_displayed    Int                  @default(3)
   announcements       Announcement[]
   owner               User                 @relation(fields: [creatorId], references: [id])
   Judge               Judge[]

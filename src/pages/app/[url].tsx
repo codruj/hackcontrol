@@ -151,6 +151,7 @@ const DashUrl = () => {
               sponsors={(hackathon as any).sponsors || undefined}
               sponsors_text={(hackathon as any).sponsors_text || undefined}
               is_finished={hackathon.is_finished}
+              max_winners_displayed={(hackathon as any).max_winners_displayed ?? 3}
             />
           </div>
         </div>

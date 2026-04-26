@@ -22,6 +22,7 @@ type Sponsor = { name: string; logo?: string; website?: string };
 interface EditHackathonProps extends updateHackathon {
   key: string;
   url: string;
+  max_winners_displayed?: number;
 }
 
 const EditHackathon = (props: EditHackathonProps) => {
@@ -60,6 +61,7 @@ const EditHackathon = (props: EditHackathonProps) => {
       organizers: props.organizers,
       judges_info: props.judges_info,
       sponsors_text: props.sponsors_text,
+      max_winners_displayed: props.max_winners_displayed ?? 3,
     },
   });
 
@@ -82,6 +84,7 @@ const EditHackathon = (props: EditHackathonProps) => {
         is_finished: false,
         timeline: timelineSteps.filter((s) => s.trim().length > 0),
         sponsors: sponsorsList,
+        max_winners_displayed: data.max_winners_displayed ?? 3,
       });
       toast.success("Hackathon updated successfully");
     } catch (err) {
@@ -228,6 +231,23 @@ const EditHackathon = (props: EditHackathonProps) => {
               {errors.description && (
                 <Alert>{errors.description?.message}</Alert>
               )}
+            </div>
+            <div className="mb-6">
+              <label htmlFor="max_winners_displayed">Winners displayed publicly:</label>
+              <input
+                id="max_winners_displayed"
+                type="number"
+                min={1}
+                max={20}
+                className={inputStyles}
+                disabled={loading}
+                {...register("max_winners_displayed", {
+                  valueAsNumber: true,
+                  min: { value: 1, message: "Must be at least 1" },
+                  max: { value: 20, message: "Must be 20 or fewer" },
+                })}
+              />
+              {errors.max_winners_displayed && <Alert>{errors.max_winners_displayed?.message}</Alert>}
             </div>
             <div className="mb-6">
               <label htmlFor="url">Key:</label>

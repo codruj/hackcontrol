@@ -13,6 +13,7 @@ export type THackathon = {
   sponsors?: { name: string; logo?: string; website?: string }[];
   sponsors_text?: string;
   is_finished: boolean;
+  max_winners_displayed?: number;
   owner: string;
   creation_date: Date;
 };

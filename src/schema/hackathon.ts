@@ -35,6 +35,7 @@ export const newHackathonSchema = z.object({
   sponsors: z.array(z.object({ name: z.string(), logo: z.string().optional(), website: z.string().optional() })).optional(),
   sponsors_text: z.string().max(2000).optional(),
   is_finished: z.boolean(),
+  max_winners_displayed: z.number().int().min(1).max(20).optional(),
 });
 
 export type newHackathon = z.TypeOf<typeof newHackathonSchema>;
@@ -57,6 +58,7 @@ export const updateHackathonSchema = z.object({
   sponsors: z.array(z.object({ name: z.string(), logo: z.string().optional(), website: z.string().optional() })).optional(),
   sponsors_text: z.string().max(2000).optional(),
   is_finished: z.boolean(),
+  max_winners_displayed: z.number().int().min(1).max(20).optional(),
 });
 
 export type updateHackathon = z.TypeOf<typeof updateHackathonSchema>;

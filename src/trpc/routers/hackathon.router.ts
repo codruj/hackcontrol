@@ -171,6 +171,7 @@ export const hackathonRouter = createTRPCRouter({
           is_finished: true,
           updatedAt: true,
           min_judges_required: true,
+          max_winners_displayed: true,
           Judge: {
             select: {
               user: {
@@ -237,7 +238,7 @@ export const hackathonRouter = createTRPCRouter({
               ? b.averageScore - a.averageScore
               : b.totalScores - a.totalScores,
           )
-          .slice(0, 3)
+          .slice(0, hackathon.max_winners_displayed ?? 3)
           .map((submission, index) => ({ ...submission, rank: index + 1 }));
 
       if (hackathon.hackathonCategories.length > 0) {
@@ -338,6 +339,7 @@ export const hackathonRouter = createTRPCRouter({
           sponsors: input.sponsors ?? [],
           sponsors_text: input.sponsors_text,
           is_finished: input.is_finished,
+          max_winners_displayed: input.max_winners_displayed ?? 3,
         },
       });
       return editHackathon;
