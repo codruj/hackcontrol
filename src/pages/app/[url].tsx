@@ -2,6 +2,7 @@ import { api } from "@/trpc/api";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
 
 import { Link, Button } from "@/ui";
 import { ArrowLeft, Send } from "@/ui/icons";
@@ -14,10 +15,37 @@ import HackathonInfo from "@/components/hackathonInfo";
 import AnnouncementManager from "@/components/announcementManager";
 import AnnouncementDisplay from "@/components/announcementDisplay";
 
+function computeAvgScore(
+  scores: { score: number; criterionId?: string | null; judge: { id: string } }[],
+  criteria: { id: string; weight: number }[],
+): number {
+  if (criteria.length === 0) {
+    const flat = scores.filter((s) => !s.criterionId);
+    return flat.length > 0 ? flat.reduce((sum, s) => sum + s.score, 0) / flat.length : 0;
+  }
+  const byJudge = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    if (s.criterionId) {
+      if (!byJudge.has(s.judge.id)) byJudge.set(s.judge.id, new Map());
+      byJudge.get(s.judge.id)!.set(s.criterionId, s.score);
+    }
+  }
+  let total = 0, count = 0;
+  for (const cs of byJudge.values()) {
+    if (cs.size < criteria.length) continue;
+    let ws = 0;
+    for (const c of criteria) ws += (cs.get(c.id) ?? 0) * (c.weight / 100);
+    total += ws;
+    count++;
+  }
+  return count > 0 ? total / count : 0;
+}
+
 const DashUrl = () => {
   const router = useRouter();
   const { url } = router.query;
   const { data: session } = useSession();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Get public hackathon data first
   const { data: publicData, isLoading: publicLoading } =
@@ -151,26 +179,93 @@ const DashUrl = () => {
           </div>
 
           {/* Participants Section */}
-          {managementData.participants &&
-          managementData.participants.length > 0 ? (
-            <div>
-              <h2 className="mb-3 text-lg font-semibold">Submissions</h2>
-              <div className="mb-6 grid grid-cols-1 gap-8 md:grid-cols-2 lg:mb-16">
-                {managementData.participants
-                  .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-                  .map((participant) => (
-                    <ParticipationCard
-                      key={participant.id}
-                      participation={participant}
-                      criteria={managementData.criteria ?? []}
-                      isJudging={ownerJudgeStatus?.isJudge || false}
-                      hackathonId={hackathon.id}
-                      isHackathonFinished={hackathon.is_finished}
-                      categoryName={(participant as any).category?.name}
-                    />
-                  ))}
-              </div>
-            </div>
+          {managementData.participants && managementData.participants.length > 0 ? (
+            (() => {
+              const criteria = managementData.criteria ?? [];
+              const sorted = [...managementData.participants].sort(
+                (a, b) => computeAvgScore((b as any).scores, criteria) - computeAvgScore((a as any).scores, criteria),
+              );
+              const uniqueCategories = Array.from(
+                new Map(
+                  sorted
+                    .filter((p) => (p as any).categoryId && (p as any).category)
+                    .map((p) => [(p as any).categoryId, (p as any).category.name]),
+                ).entries(),
+              ).map(([id, name]) => ({ id, name }));
+              const hasCategories = uniqueCategories.length > 0;
+              const filtered = selectedCategory
+                ? sorted.filter((p) => (p as any).categoryId === selectedCategory)
+                : sorted;
+
+              return (
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Submissions</h2>
+                  </div>
+                  {hasCategories && (
+                    <div className="mb-6 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedCategory(null)}
+                        className={`rounded-full border px-3 py-1 text-sm transition-colors ${selectedCategory === null ? "border-white bg-white/10 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white"}`}
+                      >
+                        All
+                      </button>
+                      {uniqueCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={`rounded-full border px-3 py-1 text-sm transition-colors ${selectedCategory === cat.id ? "border-white bg-white/10 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white"}`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {hasCategories && selectedCategory === null ? (
+                    <div className="mb-16 space-y-10">
+                      {uniqueCategories.map((cat) => {
+                        const catItems = filtered.filter((p) => (p as any).categoryId === cat.id);
+                        if (catItems.length === 0) return null;
+                        return (
+                          <div key={cat.id}>
+                            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                              {cat.name}
+                            </h3>
+                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                              {catItems.map((participant) => (
+                                <ParticipationCard
+                                  key={participant.id}
+                                  participation={participant}
+                                  criteria={criteria}
+                                  isJudging={ownerJudgeStatus?.isJudge || false}
+                                  hackathonId={hackathon.id}
+                                  isHackathonFinished={hackathon.is_finished}
+                                  categoryName={(participant as any).category?.name}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mb-16 grid grid-cols-1 gap-8 md:grid-cols-2">
+                      {filtered.map((participant) => (
+                        <ParticipationCard
+                          key={participant.id}
+                          participation={participant}
+                          criteria={criteria}
+                          isJudging={ownerJudgeStatus?.isJudge || false}
+                          hackathonId={hackathon.id}
+                          isHackathonFinished={hackathon.is_finished}
+                          categoryName={(participant as any).category?.name}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
           ) : (
             <div className="flex flex-col items-center justify-center space-y-3">
               <Prepare url={hackathon.url} />
@@ -207,26 +302,94 @@ const DashUrl = () => {
         <div className="container mx-auto mt-8 space-y-8 px-6">
           {/* Submissions Section for Judges */}
           {judgeData.participants && judgeData.participants.length > 0 ? (
-            <div>
-              <h2 className="mb-3 text-lg font-semibold">
-                Submissions to Review ({judgeData.participants.length})
-              </h2>
-              <div className="mb-6 grid grid-cols-1 gap-8 md:grid-cols-2 lg:mb-16">
-                {judgeData.participants
-                  .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-                  .map((participant) => (
-                    <ParticipationCard
-                      key={participant.id}
-                      participation={participant}
-                      criteria={judgeData.criteria ?? []}
-                      isJudging={true}
-                      hackathonId={hackathon.id}
-                      isHackathonFinished={hackathon.is_finished}
-                      categoryName={(participant as any).category?.name}
-                    />
-                  ))}
-              </div>
-            </div>
+            (() => {
+              const criteria = judgeData.criteria ?? [];
+              const sorted = [...judgeData.participants].sort(
+                (a, b) => computeAvgScore((b as any).scores, criteria) - computeAvgScore((a as any).scores, criteria),
+              );
+              const uniqueCategories = Array.from(
+                new Map(
+                  sorted
+                    .filter((p) => (p as any).categoryId && (p as any).category)
+                    .map((p) => [(p as any).categoryId, (p as any).category.name]),
+                ).entries(),
+              ).map(([id, name]) => ({ id, name }));
+              const hasCategories = uniqueCategories.length > 0;
+              const filtered = selectedCategory
+                ? sorted.filter((p) => (p as any).categoryId === selectedCategory)
+                : sorted;
+
+              return (
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">
+                      Submissions to Review ({judgeData.participants.length})
+                    </h2>
+                  </div>
+                  {hasCategories && (
+                    <div className="mb-6 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedCategory(null)}
+                        className={`rounded-full border px-3 py-1 text-sm transition-colors ${selectedCategory === null ? "border-white bg-white/10 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white"}`}
+                      >
+                        All
+                      </button>
+                      {uniqueCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={`rounded-full border px-3 py-1 text-sm transition-colors ${selectedCategory === cat.id ? "border-white bg-white/10 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white"}`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {hasCategories && selectedCategory === null ? (
+                    <div className="mb-16 space-y-10">
+                      {uniqueCategories.map((cat) => {
+                        const catItems = filtered.filter((p) => (p as any).categoryId === cat.id);
+                        if (catItems.length === 0) return null;
+                        return (
+                          <div key={cat.id}>
+                            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                              {cat.name}
+                            </h3>
+                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                              {catItems.map((participant) => (
+                                <ParticipationCard
+                                  key={participant.id}
+                                  participation={participant}
+                                  criteria={criteria}
+                                  isJudging={true}
+                                  hackathonId={hackathon.id}
+                                  isHackathonFinished={hackathon.is_finished}
+                                  categoryName={(participant as any).category?.name}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mb-16 grid grid-cols-1 gap-8 md:grid-cols-2">
+                      {filtered.map((participant) => (
+                        <ParticipationCard
+                          key={participant.id}
+                          participation={participant}
+                          criteria={criteria}
+                          isJudging={true}
+                          hackathonId={hackathon.id}
+                          isHackathonFinished={hackathon.is_finished}
+                          categoryName={(participant as any).category?.name}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
           ) : (
             <div className="flex flex-col items-center justify-center space-y-3">
               <div className="rounded-lg border border-neutral-800 p-8 text-center">
