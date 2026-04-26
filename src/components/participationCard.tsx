@@ -150,7 +150,7 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
-              <h3 className="text-md font-bold tracking-tight text-gray-900 dark:text-white md:text-xl">
+              <h3 className="text-md font-bold tracking-tight text-white md:text-xl">
                 {props.title}
               </h3>
               {categoryName && (
