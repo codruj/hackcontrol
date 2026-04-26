@@ -212,8 +212,8 @@ const ParticipationCard = ({ participation: props, criteria = [], isJudging = fa
           {props.description}
         </p>
 
-        {/* Individual scores display for organizers */}
-        {scores.length > 0 && !isJudging && (
+        {/* Individual scores display for judges, owners and admins */}
+        {scores.length > 0 && (
           <div className="mb-4 space-y-1">
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Scores:</p>
             <div className="flex flex-wrap gap-2">
