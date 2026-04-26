@@ -296,6 +296,82 @@ export const scoringRouter = createTRPCRouter({
     }),
 
   //------
+  // Save or update a judge's private note for a participation =>
+  saveJudgeNote: protectedProcedure
+    .input(z.object({ participationId: z.string(), note: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const participation = await ctx.prisma.participation.findUnique({
+        where: { id: input.participationId },
+        include: { hackathon: { select: { id: true } } },
+      });
+
+      if (!participation) throw new Error("Participation not found");
+
+      const judge = await ctx.prisma.judge.findUnique({
+        where: {
+          userId_hackathonId: {
+            userId,
+            hackathonId: participation.hackathon.id,
+          },
+        },
+      });
+
+      if (!judge) throw new Error("Judge record not found");
+
+      return ctx.prisma.judgeNote.upsert({
+        where: {
+          judgeId_participationId: {
+            judgeId: judge.id,
+            participationId: input.participationId,
+          },
+        },
+        update: { note: input.note },
+        create: {
+          judgeId: judge.id,
+          participationId: input.participationId,
+          note: input.note,
+        },
+      });
+    }),
+
+  //------
+  // Get a judge's private note for a participation =>
+  getJudgeNote: protectedProcedure
+    .input(z.object({ participationId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const participation = await ctx.prisma.participation.findUnique({
+        where: { id: input.participationId },
+        include: { hackathon: { select: { id: true } } },
+      });
+
+      if (!participation) return null;
+
+      const judge = await ctx.prisma.judge.findUnique({
+        where: {
+          userId_hackathonId: {
+            userId,
+            hackathonId: participation.hackathon.id,
+          },
+        },
+      });
+
+      if (!judge) return null;
+
+      return ctx.prisma.judgeNote.findUnique({
+        where: {
+          judgeId_participationId: {
+            judgeId: judge.id,
+            participationId: input.participationId,
+          },
+        },
+      });
+    }),
+
+  //------
   // Update minimum judges required (organizer only) =>
   updateMinJudges: protectedProcedure
     .input(

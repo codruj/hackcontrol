@@ -1,6 +1,6 @@
 import { api } from "@/trpc/api";
 import { Button } from "@/ui";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface CriterionDef {
@@ -44,6 +44,33 @@ const ScoringInterface = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Notes state
+  const [noteText, setNoteText] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  const { data: noteData } = api.scoring.getJudgeNote.useQuery({ participationId });
+
+  useEffect(() => {
+    if (noteData?.note) setNoteText(noteData.note);
+  }, [noteData?.note]);
+
+  const { mutate: saveNote } = api.scoring.saveJudgeNote.useMutation({
+    onSuccess: () => {
+      toast.success("Note saved");
+      setIsSavingNote(false);
+    },
+    onError: (error) => {
+      toast.error(`Failed to save note: ${error.message}`);
+      setIsSavingNote(false);
+    },
+  });
+
+  const handleSaveNote = () => {
+    if (!noteText.trim()) return;
+    setIsSavingNote(true);
+    saveNote({ participationId, note: noteText });
+  };
 
   const { mutate: submitScore } = api.scoring.submitScore.useMutation({
     onSuccess: () => {
@@ -154,6 +181,27 @@ const ScoringInterface = ({
             Score all criteria to continue
           </Button>
         )}
+
+        <div className="border-t border-neutral-800 pt-4">
+          <label className="mb-1.5 block text-sm font-medium text-neutral-300">
+            Notes <span className="text-xs text-neutral-500">(private)</span>
+          </label>
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Write your notes about this project..."
+            rows={3}
+            className="w-full resize-none rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+          />
+          <Button
+            onClick={handleSaveNote}
+            disabled={isSavingNote || !noteText.trim() || noteText === (noteData?.note ?? "")}
+            loadingstatus={isSavingNote}
+            className="mt-2 w-full"
+          >
+            {isSavingNote ? "Saving..." : "Save Note"}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -205,6 +253,27 @@ const ScoringInterface = ({
           </Button>
         </div>
       )}
+
+      <div className="border-t border-neutral-800 pt-4">
+        <label className="mb-1.5 block text-sm font-medium text-neutral-300">
+          Notes <span className="text-xs text-neutral-500">(private)</span>
+        </label>
+        <textarea
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          placeholder="Write your notes about this project..."
+          rows={3}
+          className="w-full resize-none rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+        />
+        <Button
+          onClick={handleSaveNote}
+          disabled={isSavingNote || !noteText.trim() || noteText === (noteData?.note ?? "")}
+          loadingstatus={isSavingNote}
+          className="mt-2 w-full"
+        >
+          {isSavingNote ? "Saving..." : "Save Note"}
+        </Button>
+      </div>
     </div>
   );
 };

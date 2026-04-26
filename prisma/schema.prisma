@@ -62,6 +62,7 @@ model Participation {
   createdBy      User               @relation(fields: [creatorId], references: [id])
   hackathon      Hackathon          @relation(fields: [hackathon_url], references: [url], onDelete: Cascade)
   scores         Score[]
+  judgeNotes     JudgeNote[]
   category       HackathonCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@unique([creatorId, hackathon_url])
@@ -171,6 +172,7 @@ model Judge {
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   scores          Score[]
   judgeCategories JudgeCategory[]
+  judgeNotes      JudgeNote[]
 
   @@unique([userId, hackathonId])
   @@map("judges")
@@ -200,6 +202,20 @@ model JudgeCategory {
 
   @@unique([judgeId, categoryId])
   @@map("judge_categories")
+}
+
+model JudgeNote {
+  id              String        @id @default(cuid())
+  judgeId         String
+  participationId String
+  note            String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  judge           Judge         @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  participation   Participation @relation(fields: [participationId], references: [id], onDelete: Cascade)
+
+  @@unique([judgeId, participationId])
+  @@map("judge_notes")
 }
 
 model VerificationToken {
