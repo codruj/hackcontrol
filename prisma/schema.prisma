@@ -180,12 +180,13 @@ model Judge {
 }
 
 model HackathonCategory {
-  id             String          @id @default(cuid())
-  hackathonId    String
-  name           String
-  description    String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                   String          @id @default(cuid())
+  hackathonId          String
+  name                 String
+  description          String?
+  max_winners_displayed Int?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
   hackathon      Hackathon       @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   participations Participation[]
   judgeCategories JudgeCategory[]

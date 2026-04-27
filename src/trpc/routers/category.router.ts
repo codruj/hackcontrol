@@ -20,6 +20,7 @@ export const categoryRouter = createTRPCRouter({
       hackathonId: z.string(),
       name: categoryNameSchema,
       description: z.string().max(500).optional(),
+      max_winners_displayed: z.number().int().min(1).max(20).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const hackathon = await ctx.prisma.hackathon.findFirst({
@@ -42,6 +43,7 @@ export const categoryRouter = createTRPCRouter({
           hackathonId: input.hackathonId,
           name: input.name.trim(),
           description: input.description?.trim() || null,
+          max_winners_displayed: input.max_winners_displayed ?? null,
         },
       });
     }),
@@ -53,6 +55,7 @@ export const categoryRouter = createTRPCRouter({
       hackathonId: z.string(),
       name: categoryNameSchema,
       description: z.string().max(500).optional(),
+      max_winners_displayed: z.number().int().min(1).max(20).nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const hackathon = await ctx.prisma.hackathon.findFirst({
@@ -80,6 +83,7 @@ export const categoryRouter = createTRPCRouter({
         data: {
           name: input.name.trim(),
           description: input.description?.trim() || null,
+          max_winners_displayed: input.max_winners_displayed ?? null,
         },
       });
     }),

@@ -15,8 +15,10 @@ const CategoryManager = ({ hackathonId }: CategoryManagerProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [newMaxWinners, setNewMaxWinners] = useState("");
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editMaxWinners, setEditMaxWinners] = useState("");
 
   const utils = api.useContext();
 
@@ -28,6 +30,7 @@ const CategoryManager = ({ hackathonId }: CategoryManagerProps) => {
       setAdding(false);
       setNewName("");
       setNewDesc("");
+      setNewMaxWinners("");
       invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -50,21 +53,38 @@ const CategoryManager = ({ hackathonId }: CategoryManagerProps) => {
     onError: (err) => toast.error(err.message),
   });
 
-  const startEdit = (cat: { id: string; name: string; description: string | null }) => {
+  const startEdit = (cat: { id: string; name: string; description: string | null; max_winners_displayed: number | null }) => {
     setEditingId(cat.id);
     setEditName(cat.name);
     setEditDesc(cat.description ?? "");
+    setEditMaxWinners(cat.max_winners_displayed != null ? String(cat.max_winners_displayed) : "");
     setAdding(false);
+  };
+
+  const parseMaxWinners = (val: string) => {
+    const n = parseInt(val, 10);
+    return !isNaN(n) && n >= 1 ? n : undefined;
   };
 
   const handleAdd = () => {
     if (!newName.trim()) return;
-    addCategory({ hackathonId, name: newName.trim(), description: newDesc.trim() || undefined });
+    addCategory({
+      hackathonId,
+      name: newName.trim(),
+      description: newDesc.trim() || undefined,
+      max_winners_displayed: parseMaxWinners(newMaxWinners),
+    });
   };
 
   const handleUpdate = (categoryId: string) => {
     if (!editName.trim()) return;
-    updateCategory({ categoryId, hackathonId, name: editName.trim(), description: editDesc.trim() || undefined });
+    updateCategory({
+      categoryId,
+      hackathonId,
+      name: editName.trim(),
+      description: editDesc.trim() || undefined,
+      max_winners_displayed: parseMaxWinners(editMaxWinners) ?? null,
+    });
   };
 
   const handleDelete = (categoryId: string, name: string) => {
@@ -106,6 +126,15 @@ const CategoryManager = ({ hackathonId }: CategoryManagerProps) => {
                     className={inputStyles}
                     maxLength={500}
                   />
+                  <input
+                    type="number"
+                    value={editMaxWinners}
+                    onChange={(e) => setEditMaxWinners(e.target.value)}
+                    placeholder="Winners displayed (leave blank to use hackathon default)"
+                    className={inputStyles}
+                    min={1}
+                    max={20}
+                  />
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleUpdate(cat.id)}
@@ -125,6 +154,9 @@ const CategoryManager = ({ hackathonId }: CategoryManagerProps) => {
                     <p className="font-medium text-white truncate">{cat.name}</p>
                     {cat.description && (
                       <p className="text-sm text-neutral-400 mt-0.5 truncate">{cat.description}</p>
+                    )}
+                    {cat.max_winners_displayed != null && (
+                      <p className="text-xs text-neutral-500 mt-0.5">{cat.max_winners_displayed} winner{cat.max_winners_displayed !== 1 ? "s" : ""} displayed</p>
                     )}
                   </div>
                   <div className="flex gap-2 shrink-0">
@@ -171,6 +203,15 @@ const CategoryManager = ({ hackathonId }: CategoryManagerProps) => {
             className={inputStyles}
             maxLength={500}
           />
+          <input
+            type="number"
+            value={newMaxWinners}
+            onChange={(e) => setNewMaxWinners(e.target.value)}
+            placeholder="Winners displayed (leave blank to use hackathon default)"
+            className={inputStyles}
+            min={1}
+            max={20}
+          />
           {!newName.trim() && <Alert>Name is required</Alert>}
           <div className="flex gap-2">
             <Button
@@ -180,7 +221,7 @@ const CategoryManager = ({ hackathonId }: CategoryManagerProps) => {
             >
               {isAdding ? "Adding..." : "Add"}
             </Button>
-            <Button onClick={() => { setAdding(false); setNewName(""); setNewDesc(""); }} disabled={isAdding}>
+            <Button onClick={() => { setAdding(false); setNewName(""); setNewDesc(""); setNewMaxWinners(""); }} disabled={isAdding}>
               Cancel
             </Button>
           </div>

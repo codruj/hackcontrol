@@ -184,7 +184,7 @@ export const hackathonRouter = createTRPCRouter({
             },
           },
           hackathonCategories: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, max_winners_displayed: true },
             orderBy: { createdAt: "asc" as const },
           },
         },
@@ -218,7 +218,7 @@ export const hackathonRouter = createTRPCRouter({
         Math.max(1, judgeCount),
       );
 
-      const rankSubset = (subset: typeof participations) =>
+      const rankSubset = (subset: typeof participations, limit: number) =>
         subset
           .map((participation) => {
             const { averageScore, completeJudges } = computeWeightedScore(
@@ -246,8 +246,10 @@ export const hackathonRouter = createTRPCRouter({
               ? b.averageScore - a.averageScore
               : b.totalScores - a.totalScores,
           )
-          .slice(0, hackathon.max_winners_displayed ?? 3)
+          .slice(0, limit)
           .map((submission, index) => ({ ...submission, rank: index + 1 }));
+
+      const hackathonLimit = hackathon.max_winners_displayed ?? 3;
 
       if (hackathon.hackathonCategories.length > 0) {
         const categoryWinners = hackathon.hackathonCategories.map((category) => ({
@@ -255,6 +257,7 @@ export const hackathonRouter = createTRPCRouter({
           categoryName: category.name,
           winners: rankSubset(
             participations.filter((p) => p.categoryId === category.id),
+            category.max_winners_displayed ?? hackathonLimit,
           ),
         }));
 
@@ -267,7 +270,7 @@ export const hackathonRouter = createTRPCRouter({
 
       return {
         hackathon,
-        winners: rankSubset(participations),
+        winners: rankSubset(participations, hackathonLimit),
         categoryWinners: [],
       };
     }),
