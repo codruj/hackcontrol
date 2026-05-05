@@ -6,7 +6,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN --network=host npm ci
+RUN npm ci
 
 COPY . .
 
