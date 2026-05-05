@@ -6,8 +6,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN --mount=type=cache,target=/root/.npm \
-    NPM_CONFIG_FETCH_TIMEOUT=600000 npm ci
+RUN --mount=type=cache,target=/root/.npm npm install
 
 COPY . .
 
