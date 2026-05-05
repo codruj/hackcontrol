@@ -57,6 +57,50 @@ const ThemeToggle = () => {
   );
 };
 
+const InstitutionLogos = () => {
+  return (
+    <div className="flex items-center space-x-3">
+      {/* AIRI */}
+      <div className="relative h-8 w-16 flex-shrink-0">
+        <Image
+          src="/images/airi_alb.png"
+          alt="AIRI"
+          fill
+          className="hidden object-contain object-center dark:block"
+          sizes="64px"
+        />
+        <Image
+          src="/images/airi_negru.png"
+          alt="AIRI"
+          fill
+          className="block object-contain object-center dark:hidden"
+          sizes="64px"
+        />
+      </div>
+
+      <span className="h-5 w-px flex-shrink-0 bg-neutral-600" />
+
+      {/* UTCN */}
+      <div className="relative h-8 w-12 flex-shrink-0">
+        <Image
+          src="/images/logo_ut_alb.png"
+          alt="UTCN"
+          fill
+          className="hidden object-contain object-center dark:block"
+          sizes="48px"
+        />
+        <Image
+          src="/images/logo_ut_negru.png"
+          alt="UTCN"
+          fill
+          className="block object-contain object-center dark:hidden"
+          sizes="48px"
+        />
+      </div>
+    </div>
+  );
+};
+
 const Header = () => {
   const { data: session } = useSession();
 
@@ -71,7 +115,7 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed top-0 z-50 block w-full bg-neutral-900/80 px-5 py-4 font-medium text-gray-200">
+    <header className="fixed top-0 z-50 block w-full bg-neutral-900/80 px-5 py-4 font-medium text-gray-200 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <Link href="/" underline={false}>
           <div className="flex items-center space-x-3 transition-all duration-100 hover:text-white">
@@ -84,7 +128,9 @@ const Header = () => {
             <p className="hidden md:block">Hackcontrol</p>
           </div>
         </Link>
-        <div className="flex items-center space-x-3">
+
+        <div className="flex items-center space-x-4">
+          <InstitutionLogos />
           <ThemeToggle />
           {session && (
             <>
