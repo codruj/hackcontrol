@@ -39,6 +39,8 @@ model Hackathon {
   participations      Participation[]
   judgingCriteria     Criterion[]
   hackathonCategories HackathonCategory[]
+  volunteers          Volunteer[]
+  volunteerTasks      VolunteerTask[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -157,6 +159,9 @@ model User {
   judgedHackathons Judge[]
   participations   Participation[]
   sessions         Session[]
+  invitedVolunteers    Volunteer[]     @relation("VolunteerInviter")
+  volunteerAssignments Volunteer[]
+  createdVolunteerTasks VolunteerTask[] @relation("VolunteerTaskCreator")
 
   @@map("users")
 }
@@ -233,6 +238,55 @@ enum Role {
   ADMIN
   ORGANIZER
   USER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model Volunteer {
+  id          String    @id @default(cuid())
+  userId      String
+  hackathonId String
+  invitedById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  inviter     User      @relation("VolunteerInviter", fields: [invitedById], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskAssignments VolunteerTaskAssignment[]
+
+  @@unique([userId, hackathonId])
+  @@map("volunteers")
+}
+
+model VolunteerTask {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  deadline    DateTime?
+  status      TaskStatus @default(TODO)
+  hackathonId String
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  hackathon   Hackathon  @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  createdBy   User       @relation("VolunteerTaskCreator", fields: [createdById], references: [id])
+  assignees   VolunteerTaskAssignment[]
+
+  @@map("volunteer_tasks")
+}
+
+model VolunteerTaskAssignment {
+  taskId      String
+  volunteerId String
+  task        VolunteerTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  volunteer   Volunteer     @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, volunteerId])
+  @@map("volunteer_task_assignments")
 }
 
 enum crdb_internal_region {

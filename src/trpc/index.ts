@@ -256,3 +256,48 @@ const enforceUserCanManageHackathon = t.middleware(async ({ ctx, next, input }) 
  * Enforces that user can manage the hackathon specified in input.hackathonId
  */
 export const hackathonManagerProcedure = t.procedure.use(enforceUserCanManageHackathon);
+
+/** Reusable middleware that enforces user can access volunteer data for specific hackathon. */
+const enforceUserCanAccessVolunteerData = t.middleware(async ({ ctx, next, input }) => {
+  if (!ctx.session || !ctx.session.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const hackathonId = (input as any)?.hackathonId;
+  if (!hackathonId) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "hackathonId required" });
+  }
+
+  const userId = ctx.session.user.id;
+
+  if (ctx.session.user.role === "ADMIN") {
+    return next({ ctx: { session: { ...ctx.session, user: ctx.session.user } } });
+  }
+
+  if (ctx.session.user.role === "ORGANIZER") {
+    const hackathon = await ctx.prisma.hackathon.findUnique({
+      where: { id: hackathonId },
+      select: { creatorId: true },
+    });
+    if (hackathon?.creatorId === userId) {
+      return next({ ctx: { session: { ...ctx.session, user: ctx.session.user } } });
+    }
+  }
+
+  const isVolunteer = await ctx.prisma.volunteer.findUnique({
+    where: { userId_hackathonId: { userId, hackathonId } },
+  });
+
+  if (!isVolunteer) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this hackathon's volunteer data" });
+  }
+
+  return next({ ctx: { session: { ...ctx.session, user: ctx.session.user } } });
+});
+
+/**
+ * Volunteer procedure
+ *
+ * Allows access to admins, hackathon owners, and volunteers assigned to the hackathon.
+ */
+export const volunteerProcedure = t.procedure.use(enforceUserCanAccessVolunteerData);

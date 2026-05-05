@@ -3,6 +3,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import NextLink from "next/link";
 
 import { Link, Button } from "@/ui";
 import { ArrowLeft, Send } from "@/ui/icons";
@@ -14,6 +15,7 @@ import CopyKey from "@/components/copyKey";
 import HackathonInfo from "@/components/hackathonInfo";
 import AnnouncementManager from "@/components/announcementManager";
 import AnnouncementDisplay from "@/components/announcementDisplay";
+import VolunteerManager from "@/components/volunteerManager";
 
 function computeAvgScore(
   scores: { score: number; criterionId?: string | null; judge: { id: string } }[],
@@ -86,6 +88,14 @@ const DashUrl = () => {
       },
     );
 
+  // Check if current user is a volunteer for this hackathon
+  const { data: volunteersList } = api.volunteer.getHackathonVolunteers.useQuery(
+    { hackathonId: publicData?.hackathon?.id ?? "" },
+    { enabled: !!publicData?.hackathon?.id },
+  );
+
+  const isVolunteer = volunteersList?.some((v: { userId: string }) => v.userId === session?.user?.id) ?? false;
+
   const isLoading = publicLoading || (publicData?.isOwner && managementLoading) || (!publicData?.isOwner && judgeLoading);
 
   if (isLoading) {
@@ -133,6 +143,11 @@ const DashUrl = () => {
             )}
           </div>
           <div className="flex items-center space-x-3">
+            <NextLink href={`/volunteers/${hackathon.url}`}>
+              <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-900/40">
+                Volunteer Tasks
+              </button>
+            </NextLink>
             <CopyKey url={hackathon.url} />
             <EditHackathon
               id={hackathon.id}
@@ -163,6 +178,9 @@ const DashUrl = () => {
               hackathonUrl={hackathon.url}
             />
           </div>
+
+          {/* Volunteer Management Section */}
+          <VolunteerManager hackathonId={hackathon.id} />
 
           {/* Stats Section */}
           <div className="flex items-center space-x-6 rounded-lg border border-neutral-800 p-4">
@@ -465,7 +483,19 @@ const DashUrl = () => {
               FINISHED
             </span>
           )}
+          {isVolunteer && (
+            <span className="rounded-full bg-purple-600 px-2 py-1 text-xs font-medium text-white">
+              VOLUNTEER
+            </span>
+          )}
         </div>
+        {isVolunteer && (
+          <NextLink href={`/volunteers/${hackathon.url}`}>
+            <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-900/40">
+              View My Tasks
+            </button>
+          </NextLink>
+        )}
       </div>
 
       <AnnouncementDisplay hackathonUrl={hackathon.url} />
