@@ -41,6 +41,9 @@ model Hackathon {
   hackathonCategories HackathonCategory[]
   volunteers          Volunteer[]
   volunteerTasks      VolunteerTask[]
+  mentors             Mentor[]
+  mentorSlots         MentorSlot[]
+  chatChannels        ChatChannel[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -162,6 +165,10 @@ model User {
   invitedVolunteers    Volunteer[]     @relation("VolunteerInviter")
   volunteerAssignments Volunteer[]
   createdVolunteerTasks VolunteerTask[] @relation("VolunteerTaskCreator")
+  invitedMentors       Mentor[]        @relation("MentorInviter")
+  mentorAssignments    Mentor[]
+  bookedSlots          MentorSlot[]    @relation("SlotBooker")
+  chatMessages         ChatMessage[]
 
   @@map("users")
 }
@@ -287,6 +294,77 @@ model VolunteerTaskAssignment {
 
   @@id([taskId, volunteerId])
   @@map("volunteer_task_assignments")
+}
+
+enum ChannelType {
+  MENTORS_PARTICIPANTS
+  MENTORS_JUDGES
+  VOLUNTEERS_PARTICIPANTS
+  VOLUNTEERS_ONLY
+  TEAM_ONLY
+}
+
+model Mentor {
+  id          String       @id @default(cuid())
+  userId      String
+  hackathonId String
+  invitedById String
+  bio         String?
+  expertise   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  hackathon   Hackathon    @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  inviter     User         @relation("MentorInviter", fields: [invitedById], references: [id])
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots       MentorSlot[]
+
+  @@unique([userId, hackathonId])
+  @@map("mentors")
+}
+
+model MentorSlot {
+  id          String    @id @default(cuid())
+  mentorId    String
+  hackathonId String
+  startTime   DateTime
+  endTime     DateTime
+  topic       String?
+  isBooked    Boolean   @default(false)
+  bookedById  String?
+  bookingNote String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  mentor      Mentor    @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  bookedBy    User?     @relation("SlotBooker", fields: [bookedById], references: [id])
+
+  @@map("mentor_slots")
+}
+
+model ChatChannel {
+  id              String      @id @default(cuid())
+  key             String      @unique
+  hackathonId     String
+  type            ChannelType
+  participationId String?
+  name            String
+  createdAt       DateTime    @default(now())
+  hackathon       Hackathon   @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  messages        ChatMessage[]
+
+  @@map("chat_channels")
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  channelId String
+  userId    String
+  content   String
+  createdAt DateTime    @default(now())
+  channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@map("chat_messages")
 }
 
 enum crdb_internal_region {

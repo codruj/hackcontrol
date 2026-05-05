@@ -16,6 +16,7 @@ import HackathonInfo from "@/components/hackathonInfo";
 import AnnouncementManager from "@/components/announcementManager";
 import AnnouncementDisplay from "@/components/announcementDisplay";
 import VolunteerManager from "@/components/volunteerManager";
+import MentorManager from "@/components/mentorManager";
 
 function computeAvgScore(
   scores: { score: number; criterionId?: string | null; judge: { id: string } }[],
@@ -96,6 +97,12 @@ const DashUrl = () => {
 
   const isVolunteer = volunteersList?.some((v: { userId: string }) => v.userId === session?.user?.id) ?? false;
 
+  const { data: mentorsList } = api.mentor.getHackathonMentors.useQuery(
+    { hackathonId: publicData?.hackathon?.id ?? "" },
+    { enabled: !!publicData?.hackathon?.id },
+  );
+  const isMentor = mentorsList?.some((m: { userId: string }) => m.userId === session?.user?.id) ?? false;
+
   const isLoading = publicLoading || (publicData?.isOwner && managementLoading) || (!publicData?.isOwner && judgeLoading);
 
   if (isLoading) {
@@ -143,6 +150,16 @@ const DashUrl = () => {
             )}
           </div>
           <div className="flex items-center space-x-3">
+            <NextLink href={`/chat/${hackathon.url}`}>
+              <button className="rounded-md border border-blue-700 bg-blue-900/20 px-4 py-2 text-sm font-medium text-blue-300 transition-all hover:bg-blue-900/40">
+                Chat
+              </button>
+            </NextLink>
+            <NextLink href={`/mentors/${hackathon.url}`}>
+              <button className="rounded-md border border-amber-700 bg-amber-900/20 px-4 py-2 text-sm font-medium text-amber-300 transition-all hover:bg-amber-900/40">
+                Mentors
+              </button>
+            </NextLink>
             <NextLink href={`/volunteers/${hackathon.url}`}>
               <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-900/40">
                 Volunteer Tasks
@@ -181,6 +198,9 @@ const DashUrl = () => {
 
           {/* Volunteer Management Section */}
           <VolunteerManager hackathonId={hackathon.id} />
+
+          {/* Mentor Management Section */}
+          <MentorManager hackathonId={hackathon.id} />
 
           {/* Stats Section */}
           <div className="flex items-center space-x-6 rounded-lg border border-neutral-800 p-4">
@@ -488,14 +508,31 @@ const DashUrl = () => {
               VOLUNTEER
             </span>
           )}
+          {isMentor && (
+            <span className="rounded-full bg-amber-600 px-2 py-1 text-xs font-medium text-white">
+              MENTOR
+            </span>
+          )}
         </div>
-        {isVolunteer && (
-          <NextLink href={`/volunteers/${hackathon.url}`}>
-            <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-900/40">
-              View My Tasks
+        <div className="flex items-center gap-2">
+          <NextLink href={`/chat/${hackathon.url}`}>
+            <button className="rounded-md border border-blue-700 bg-blue-900/20 px-4 py-2 text-sm font-medium text-blue-300 transition-all hover:bg-blue-900/40">
+              Chat
             </button>
           </NextLink>
-        )}
+          <NextLink href={`/mentors/${hackathon.url}`}>
+            <button className="rounded-md border border-amber-700 bg-amber-900/20 px-4 py-2 text-sm font-medium text-amber-300 transition-all hover:bg-amber-900/40">
+              Mentors
+            </button>
+          </NextLink>
+          {isVolunteer && (
+            <NextLink href={`/volunteers/${hackathon.url}`}>
+              <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-900/40">
+                My Tasks
+              </button>
+            </NextLink>
+          )}
+        </div>
       </div>
 
       <AnnouncementDisplay hackathonUrl={hackathon.url} />

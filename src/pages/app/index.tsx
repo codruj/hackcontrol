@@ -15,6 +15,7 @@ import EnterKey from "@/components/enterKey";
 import HackathonCard from "@/components/hackathonCard";
 import JudgesDashboard from "@/components/judgesDashboard";
 import VolunteersDashboard from "@/components/volunteersDashboard";
+import MentorsDashboard from "@/components/mentorsDashboard";
 import Loading from "@/components/loading";
 
 const Dashboard = () => {
@@ -125,6 +126,9 @@ const Dashboard = () => {
 
         {/* Volunteer Assignments Section */}
         <VolunteersDashboard />
+
+        {/* Mentor Assignments Section */}
+        <MentorsDashboard />
 
         {/* Participations Section */}
         <h1 className="mb-4 mt-5 text-2xl font-medium">My Participations</h1>
