@@ -61,7 +61,7 @@ const InstitutionLogos = () => {
   return (
     <div className="flex items-center space-x-3">
       {/* AIRI */}
-      <div className="relative h-8 w-16 flex-shrink-0">
+      <div className="relative h-10 w-20 flex-shrink-0">
         <Image
           src="/images/airi_alb.png"
           alt="AIRI"
