@@ -4,7 +4,6 @@ import {
   createTRPCRouter,
   organizerProcedure,
   protectedProcedure,
-  volunteerProcedure,
 } from "..";
 
 const taskStatusSchema = z.enum(["TODO", "IN_PROGRESS", "DONE"]);
@@ -270,9 +269,29 @@ export const volunteerRouter = createTRPCRouter({
       return ctx.prisma.volunteerTask.delete({ where: { id: taskId } });
     }),
 
-  getTasks: volunteerProcedure
+  getTasks: protectedProcedure
     .input(z.object({ hackathonId: z.string() }))
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const role = ctx.session.user.role;
+
+      if (role !== "ADMIN") {
+        const hackathon = await ctx.prisma.hackathon.findUnique({
+          where: { id: input.hackathonId },
+          select: { creatorId: true },
+        });
+        const isOwner = hackathon?.creatorId === userId;
+
+        if (!isOwner) {
+          const volunteer = await ctx.prisma.volunteer.findUnique({
+            where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } },
+          });
+          if (!volunteer) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Not a volunteer for this hackathon" });
+          }
+        }
+      }
+
       return ctx.prisma.volunteerTask.findMany({
         where: { hackathonId: input.hackathonId },
         include: {
