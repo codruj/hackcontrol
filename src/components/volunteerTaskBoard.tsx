@@ -453,7 +453,7 @@ const VolunteerTaskBoard = ({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
 
-  const { data: tasks, isLoading, refetch } = api.volunteer.getTasks.useQuery({ hackathonId });
+  const { data: tasks, isLoading, isError, error, refetch } = api.volunteer.getTasks.useQuery({ hackathonId });
 
   const updateStatusMutation = api.volunteer.updateTaskStatus.useMutation({
     onSuccess: () => refetch(),
@@ -503,12 +503,6 @@ const VolunteerTaskBoard = ({
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="py-12 text-center text-neutral-400">Loading tasks...</div>
-    );
-  }
-
   const byStatus = (status: TaskStatus) => taskList.filter((t: Task) => t.status === status);
 
   const columnProps = {
@@ -530,12 +524,22 @@ const VolunteerTaskBoard = ({
         </div>
       )}
 
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <TaskColumn status="TODO" tasks={byStatus("TODO")} {...columnProps} />
-          <TaskColumn status="IN_PROGRESS" tasks={byStatus("IN_PROGRESS")} {...columnProps} />
-          <TaskColumn status="DONE" tasks={byStatus("DONE")} {...columnProps} />
+      {isError && (
+        <div className="mb-4 rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400">
+          Failed to load tasks: {(error as any)?.message || "Unknown error"}
         </div>
+      )}
+
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        {isLoading ? (
+          <div className="py-12 text-center text-neutral-400">Loading tasks...</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <TaskColumn status="TODO" tasks={byStatus("TODO")} {...columnProps} />
+            <TaskColumn status="IN_PROGRESS" tasks={byStatus("IN_PROGRESS")} {...columnProps} />
+            <TaskColumn status="DONE" tasks={byStatus("DONE")} {...columnProps} />
+          </div>
+        )}
 
         <DragOverlay>
           {activeDragTask && (
