@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   hackathons:
-    build: .
+    build:
+      context: .
+      network: host
     container_name: hackathons-app
     restart: always
     extra_hosts:
