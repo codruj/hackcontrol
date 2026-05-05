@@ -81,7 +81,7 @@ const LeaderboardDisplay = ({ hackathonId, hackathonUrl, isOrganizer = false }: 
                 className={`rounded-lg border-2 p-4 ${
                   entry.isPodium
                     ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20"
-                    : "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+                    : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -149,7 +149,7 @@ const LeaderboardDisplay = ({ hackathonId, hackathonUrl, isOrganizer = false }: 
             </h3>
             <button
               onClick={() => setShowIneligible(!showIneligible)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="rounded-md border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               {showIneligible ? "Hide" : "Show"} Pending
             </button>

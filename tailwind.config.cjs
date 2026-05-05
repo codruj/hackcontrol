@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       fontFamily: {
@@ -10,7 +11,21 @@ module.exports = {
         "border-inherit": "inherit",
       },
       colors: {
-        midnight: "#161616",
+        midnight: "rgb(var(--c-midnight) / <alpha-value>)",
+        white: "rgb(var(--c-white) / <alpha-value>)",
+        neutral: {
+          50: "rgb(var(--c-neutral-50) / <alpha-value>)",
+          100: "rgb(var(--c-neutral-100) / <alpha-value>)",
+          200: "rgb(var(--c-neutral-200) / <alpha-value>)",
+          300: "rgb(var(--c-neutral-300) / <alpha-value>)",
+          400: "rgb(var(--c-neutral-400) / <alpha-value>)",
+          500: "rgb(var(--c-neutral-500) / <alpha-value>)",
+          600: "rgb(var(--c-neutral-600) / <alpha-value>)",
+          700: "rgb(var(--c-neutral-700) / <alpha-value>)",
+          800: "rgb(var(--c-neutral-800) / <alpha-value>)",
+          900: "rgb(var(--c-neutral-900) / <alpha-value>)",
+          950: "rgb(var(--c-neutral-950) / <alpha-value>)",
+        },
       },
       keyframes: {
         overlayShow: {
