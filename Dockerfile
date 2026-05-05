@@ -4,22 +4,16 @@ RUN apt-get update -qq && apt-get install -y -qq openssl && rm -rf /var/lib/apt/
 
 WORKDIR /app
 
-# 1. Copy package files
 COPY package*.json ./
 
-# 2. Install ALL dependencies
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-# 3. Copy the rest of your app code
 COPY . .
 
-# 4. Run prisma generate (will now detect openssl 3.0)
 RUN npx prisma generate
 
-# 5. Build your Next.js app
 RUN npm run build
 
-# 6. Prune devDependencies
 RUN npm prune --production
 
 EXPOSE 3000
