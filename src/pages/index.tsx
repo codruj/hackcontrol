@@ -33,7 +33,7 @@ export default function Home() {
         </h1>
         <div className="flex items-center space-x-2">
           <ExternalLink
-            href="https://github.com/pheralb/project-hackathon"
+            href="https://github.com/airi-utcn/hackcontrol"
             className={ButtonStyles}
           >
             <div className="flex items-center space-x-2">
