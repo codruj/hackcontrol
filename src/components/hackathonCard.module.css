@@ -15,3 +15,20 @@
   );
   z-index: 1;
 }
+
+/* Light mode: swap white glows for subtle dark ones so the hover effect stays visible */
+:global(html.light) .card::before {
+  background: radial-gradient(
+    800px circle at var(--mouse-x) var(--mouse-y),
+    rgba(0, 0, 0, 0.04),
+    transparent 40%
+  );
+}
+
+:global(html.light) .card_border {
+  background: radial-gradient(
+    400px circle at var(--mouse-x) var(--mouse-y),
+    rgba(0, 0, 0, 0.18),
+    transparent 40%
+  );
+}

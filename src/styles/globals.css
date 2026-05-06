@@ -49,6 +49,14 @@ html.light {
   --sb-thumb-color: #cbd5e1;
 }
 
+html.light .text-gray-100 {
+  color: #374151;
+}
+
+html.light .text-gray-200 {
+  color: #374151;
+}
+
 html.light .text-gray-300,
 html.light .text-gray-400 {
   color: #374151;
@@ -57,6 +65,23 @@ html.light .text-gray-400 {
 html.light .text-gray-500 {
   color: #4b5563;
 }
+
+/* Hardcoded dark gray backgrounds that need to invert in light mode */
+html.light .bg-gray-700 {
+  background-color: #e5e7eb;
+}
+
+html.light .bg-gray-800 {
+  background-color: #f3f4f6;
+}
+
+/* bg-white/10 and bg-white bg-opacity-10 cards: give them a visible border in light mode
+   (in light mode, 'white' is a dark color so white/10 produces a very faint dark tint,
+   nearly invisible — a border makes the card outline clear) */
+html.light .bg-white.bg-opacity-10 {
+  border: 1px solid rgb(var(--c-neutral-800));
+}
+
 
 body {
   scrollbar-color: var(--sb-thumb-color) var(--sb-track-color);

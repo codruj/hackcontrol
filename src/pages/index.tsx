@@ -188,27 +188,25 @@ export default function Home() {
 
         {/* Sponsors & Partners card */}
         <div className="mb-2 mt-4 w-full max-w-sm">
-          <div className="relative rounded-md bg-white/10">
-            <div className="relative z-[2] m-[1px] flex flex-col rounded-[inherit] bg-midnight p-5">
-              <h3 className="mb-3 text-xl font-medium">🤝 Sponsors &amp; Partners</h3>
-              {sponsors.length > 0 ? (
-                <ul
-                  className="max-h-44 space-y-1.5 overflow-y-auto pr-1"
-                  style={{ scrollbarWidth: "thin" }}
-                >
-                  {sponsors.map((name) => (
-                    <li
-                      key={name}
-                      className="rounded px-2 py-1 text-sm text-gray-300 bg-white/5"
-                    >
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-neutral-500 italic">No sponsors listed yet.</p>
-              )}
-            </div>
+          <div className="rounded-md border border-neutral-800 bg-midnight p-5">
+            <h3 className="mb-3 text-xl font-medium">🤝 Sponsors &amp; Partners</h3>
+            {sponsors.length > 0 ? (
+              <ul
+                className="max-h-44 space-y-1.5 overflow-y-auto pr-1"
+                style={{ scrollbarWidth: "thin" }}
+              >
+                {sponsors.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded border border-neutral-800 px-2 py-1 text-sm text-neutral-300"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-neutral-500 italic">No sponsors listed yet.</p>
+            )}
           </div>
 
           <div className="mt-5 flex flex-col items-center gap-3">

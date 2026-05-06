@@ -158,7 +158,7 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed top-0 z-50 block w-full bg-neutral-900/80 px-5 py-4 font-medium text-gray-200 backdrop-blur-sm">
+    <header className="fixed top-0 z-50 block w-full bg-neutral-900/80 px-5 py-4 font-medium text-white backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <Link href="/" underline={false}>
           <div className="flex items-center space-x-3 transition-all duration-100 hover:text-white">
