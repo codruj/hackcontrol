@@ -165,6 +165,7 @@ export const hackathonRouter = createTRPCRouter({
           categories: true,
           organizers: true,
           judges_info: true,
+          mentors_info: true,
           timeline: true,
           sponsors: true,
           url: true,
@@ -174,6 +175,7 @@ export const hackathonRouter = createTRPCRouter({
           max_winners_displayed: true,
           Judge: {
             select: {
+              company: true,
               user: {
                 select: {
                   name: true,
@@ -182,6 +184,19 @@ export const hackathonRouter = createTRPCRouter({
                 },
               },
             },
+          },
+          mentors: {
+            select: {
+              company: true,
+              user: {
+                select: {
+                  name: true,
+                  username: true,
+                  image: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "asc" as const },
           },
           hackathonCategories: {
             select: { id: true, name: true, max_winners_displayed: true },
@@ -294,6 +309,7 @@ export const hackathonRouter = createTRPCRouter({
           categories: input.categories,
           organizers: input.organizers,
           judges_info: input.judges_info,
+          mentors_info: input.mentors_info,
           timeline: input.timeline ?? [],
           is_finished: input.is_finished,
           creatorId: userId,
@@ -346,6 +362,7 @@ export const hackathonRouter = createTRPCRouter({
           categories: input.categories,
           organizers: input.organizers,
           judges_info: input.judges_info,
+          mentors_info: input.mentors_info,
           timeline: input.timeline,
           sponsors: input.sponsors ?? [],
           sponsors_text: input.sponsors_text,
@@ -471,6 +488,7 @@ export const hackathonRouter = createTRPCRouter({
           categories: true,
           organizers: true,
           judges_info: true,
+          mentors_info: true,
           timeline: true,
           url: true,
           is_finished: true,
@@ -478,6 +496,7 @@ export const hackathonRouter = createTRPCRouter({
           updatedAt: true,
           Judge: {
             select: {
+              company: true,
               user: {
                 select: {
                   name: true,
@@ -486,6 +505,19 @@ export const hackathonRouter = createTRPCRouter({
                 },
               },
             },
+          },
+          mentors: {
+            select: {
+              company: true,
+              user: {
+                select: {
+                  name: true,
+                  username: true,
+                  image: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "asc" as const },
           },
         },
       });

@@ -8,10 +8,11 @@ export const judgeRouter = createTRPCRouter({
     .input(z.object({
       hackathonId: z.string(),
       userId: z.string(),
+      company: z.string().max(200).optional(),
       categoryIds: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { hackathonId, userId, categoryIds } = input;
+      const { hackathonId, userId, company, categoryIds } = input;
       const inviterId = ctx.session.user.id;
 
       // Check if user can manage this hackathon (if not ADMIN)
@@ -45,6 +46,7 @@ export const judgeRouter = createTRPCRouter({
           userId,
           hackathonId,
           invitedBy: inviterId,
+          company: company ?? null,
         },
         include: {
           user: {

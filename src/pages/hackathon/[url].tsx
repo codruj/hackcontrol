@@ -67,8 +67,10 @@ export default function PublicHackathonPage() {
     ? ((hackathon as any).timeline as string[]).filter((s: string) => s.trim().length > 0)
     : [];
 
-  const judges: { user: { name: string | null; username: string | null; image: string | null } }[] =
+  const judges: { company?: string | null; user: { name: string | null; username: string | null; image: string | null } }[] =
     (hackathon as any).Judge ?? [];
+  const mentors: { company?: string | null; user: { name: string | null; username: string | null; image: string | null } }[] =
+    (hackathon as any).mentors ?? [];
 
   const sponsors: Sponsor[] = Array.isArray((hackathon as any).sponsors)
     ? ((hackathon as any).sponsors as Sponsor[]).filter((s) => s.name?.trim().length > 0)
@@ -79,7 +81,7 @@ export default function PublicHackathonPage() {
     ...(timeline.length > 0 ? [{ id: "timeline" as TabId, label: "Timeline" }] : []),
     ...(hackathon.rules || hackathon.criteria ? [{ id: "rules" as TabId, label: "Rules" }] : []),
     ...((hackathon as any).prizes ? [{ id: "prizes" as TabId, label: "Prizes" }] : []),
-    ...((hackathon as any).organizers || (hackathon as any).judges_info || judges.length > 0
+    ...((hackathon as any).organizers || (hackathon as any).judges_info || (hackathon as any).mentors_info || judges.length > 0 || mentors.length > 0
       ? [{ id: "people" as TabId, label: "People" }]
       : []),
     ...(sponsors.length > 0 ? [{ id: "sponsors" as TabId, label: "Sponsors" }] : []),
@@ -275,8 +277,48 @@ export default function PublicHackathonPage() {
                             <p className="text-sm font-medium text-white">
                               {j.user.name ?? j.user.username ?? "Unknown"}
                             </p>
+                            {j.company && (
+                              <p className="text-xs text-neutral-400">{j.company}</p>
+                            )}
                             {j.user.username && (
                               <p className="text-xs text-gray-500">@{j.user.username}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(hackathon as any).mentors_info && (
+                  <div className={(hackathon as any).organizers || (hackathon as any).judges_info || judges.length > 0 ? "border-t border-neutral-800 pt-6" : ""}>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      Mentors
+                    </h3>
+                    <p className="whitespace-pre-wrap leading-relaxed text-gray-300">
+                      {(hackathon as any).mentors_info}
+                    </p>
+                  </div>
+                )}
+                {mentors.length > 0 && (
+                  <div className={(hackathon as any).organizers || (hackathon as any).judges_info || judges.length > 0 || (hackathon as any).mentors_info ? "border-t border-neutral-800 pt-6" : ""}>
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      Mentor Accounts
+                    </h3>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {mentors.map((m, i) => (
+                        <div key={i} className="flex items-center gap-3 rounded-lg border border-neutral-800 px-4 py-3">
+                          {m.user.image && (
+                            <img src={m.user.image} alt={m.user.name ?? "Mentor"} className="h-8 w-8 rounded-full" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-white">
+                              {m.user.name ?? m.user.username ?? "Unknown"}
+                            </p>
+                            {m.company && (
+                              <p className="text-xs text-neutral-400">{m.company}</p>
+                            )}
+                            {m.user.username && (
+                              <p className="text-xs text-gray-500">@{m.user.username}</p>
                             )}
                           </div>
                         </div>

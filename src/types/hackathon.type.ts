@@ -10,6 +10,7 @@ export type THackathon = {
   categories?: string;
   organizers?: string;
   judges_info?: string;
+  mentors_info?: string;
   sponsors?: { name: string; logo?: string; website?: string }[];
   sponsors_text?: string;
   is_finished: boolean;

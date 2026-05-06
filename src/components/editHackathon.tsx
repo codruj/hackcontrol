@@ -60,6 +60,7 @@ const EditHackathon = (props: EditHackathonProps) => {
       categories: props.categories,
       organizers: props.organizers,
       judges_info: props.judges_info,
+      mentors_info: props.mentors_info,
       sponsors_text: props.sponsors_text,
       max_winners_displayed: props.max_winners_displayed ?? 3,
     },
@@ -108,6 +109,7 @@ const EditHackathon = (props: EditHackathonProps) => {
         categories: formValues.categories,
         organizers: formValues.organizers,
         judges_info: formValues.judges_info,
+        mentors_info: formValues.mentors_info,
         is_finished: props.is_finished,
         timeline: timelineSteps.filter((s) => s.trim().length > 0),
         sponsors: sponsorsList,
@@ -159,6 +161,7 @@ const EditHackathon = (props: EditHackathonProps) => {
         categories: formValues.categories,
         organizers: formValues.organizers,
         judges_info: formValues.judges_info,
+        mentors_info: formValues.mentors_info,
         is_finished: props.is_finished,
         timeline: timelineSteps.filter((s) => s.trim().length > 0),
         sponsors: sponsorsList.filter((s) => s.name.trim().length > 0),
@@ -404,6 +407,25 @@ const EditHackathon = (props: EditHackathonProps) => {
                 })}
               />
               {errors.judges_info && <Alert>{errors.judges_info?.message}</Alert>}
+            </div>
+            <div className="mb-6">
+              <label htmlFor="mentors_info">Mentors:</label>
+              <textarea
+                id="mentors_info"
+                defaultValue={props.mentors_info || ""}
+                className={inputStyles}
+                placeholder="List mentors with their companies — e.g. Jane Doe, Acme Corp (max 2000 characters)"
+                rows={4}
+                autoComplete="off"
+                disabled={loading}
+                {...register("mentors_info", {
+                  maxLength: {
+                    value: 2000,
+                    message: "Mentors info must be less than 2000 characters",
+                  },
+                })}
+              />
+              {errors.mentors_info && <Alert>{errors.mentors_info?.message}</Alert>}
             </div>
             <div className="mb-6">
               <label htmlFor="matchmaking">Matchmaking / Team Formation:</label>

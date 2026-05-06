@@ -4,6 +4,16 @@ import { Send, Trophy, Clock, CheckCircle } from "@/ui/icons";
 import { useRouter } from "next/navigation";
 
 interface Judge {
+  company?: string | null;
+  user: {
+    name: string | null;
+    username: string | null;
+    image: string | null;
+  };
+}
+
+interface Mentor {
+  company?: string | null;
   user: {
     name: string | null;
     username: string | null;
@@ -23,11 +33,13 @@ interface HackathonInfoProps {
     categories?: string | null;
     organizers?: string | null;
     judges_info?: string | null;
+    mentors_info?: string | null;
     timeline?: unknown;
     url: string;
     is_finished: boolean;
     updatedAt: Date | string;
     Judge?: Judge[];
+    mentors?: Mentor[];
   };
   userParticipation?: {
     id: string;
@@ -53,13 +65,14 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
     : [];
 
   const judges: Judge[] = hackathon.Judge ?? [];
+  const mentors: Mentor[] = hackathon.mentors ?? [];
 
   const tabs: Tab[] = [
     { id: "overview", label: "Overview" },
     ...(timeline.length > 0 ? [{ id: "timeline" as TabId, label: "Timeline" }] : []),
     ...(hackathon.rules || hackathon.criteria ? [{ id: "rules" as TabId, label: "Rules" }] : []),
     ...(hackathon.prizes ? [{ id: "prizes" as TabId, label: "Prizes" }] : []),
-    ...(hackathon.organizers || hackathon.judges_info || judges.length > 0
+    ...(hackathon.organizers || hackathon.judges_info || hackathon.mentors_info || judges.length > 0 || mentors.length > 0
       ? [{ id: "people" as TabId, label: "People" }]
       : []),
   ];
@@ -258,8 +271,57 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
                         <p className="text-sm font-medium text-white">
                           {j.user.name ?? j.user.username ?? "Unknown"}
                         </p>
+                        {j.company && (
+                          <p className="text-xs text-neutral-400">{j.company}</p>
+                        )}
                         {j.user.username && (
                           <p className="text-xs text-gray-500">@{j.user.username}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {hackathon.mentors_info && (
+              <div className={hackathon.organizers || hackathon.judges_info || judges.length > 0 ? "border-t border-neutral-800 pt-6" : ""}>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
+                  Mentors
+                </h3>
+                <p className="whitespace-pre-wrap leading-relaxed text-gray-300">
+                  {hackathon.mentors_info}
+                </p>
+              </div>
+            )}
+
+            {mentors.length > 0 && (
+              <div className={hackathon.organizers || hackathon.judges_info || judges.length > 0 || hackathon.mentors_info ? "border-t border-neutral-800 pt-6" : ""}>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
+                  Mentor Accounts
+                </h3>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {mentors.map((m, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 rounded-lg border border-neutral-800 px-4 py-3"
+                    >
+                      {m.user.image && (
+                        <img
+                          src={m.user.image}
+                          alt={m.user.name ?? "Mentor"}
+                          className="h-8 w-8 rounded-full"
+                        />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {m.user.name ?? m.user.username ?? "Unknown"}
+                        </p>
+                        {m.company && (
+                          <p className="text-xs text-neutral-400">{m.company}</p>
+                        )}
+                        {m.user.username && (
+                          <p className="text-xs text-gray-500">@{m.user.username}</p>
                         )}
                       </div>
                     </div>

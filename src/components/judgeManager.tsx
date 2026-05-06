@@ -4,6 +4,7 @@ import { Button } from "@/ui";
 import { Plus, Cancel } from "@/ui/icons";
 import UserSearch from "./userSearch";
 import { toast } from "sonner";
+import { inputStyles } from "@/ui/input";
 
 interface JudgeManagerProps {
   hackathonId: string;
@@ -11,6 +12,7 @@ interface JudgeManagerProps {
 
 const JudgeManager = ({ hackathonId }: JudgeManagerProps) => {
   const [isAddingJudge, setIsAddingJudge] = useState(false);
+  const [pendingCompany, setPendingCompany] = useState("");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [editingJudgeId, setEditingJudgeId] = useState<string | null>(null);
   const [editCategoryIds, setEditCategoryIds] = useState<string[]>([]);
@@ -25,6 +27,7 @@ const JudgeManager = ({ hackathonId }: JudgeManagerProps) => {
       refetch();
       toast.success(`${newJudge.user.name} added as judge`);
       setIsAddingJudge(false);
+      setPendingCompany("");
       setSelectedCategoryIds([]);
     },
     onError: (error) => {
@@ -57,6 +60,7 @@ const JudgeManager = ({ hackathonId }: JudgeManagerProps) => {
     addJudgeMutation.mutate({
       hackathonId,
       userId: user.id,
+      company: pendingCompany.trim() || undefined,
       categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
     });
   };
@@ -107,11 +111,23 @@ const JudgeManager = ({ hackathonId }: JudgeManagerProps) => {
             <h4 className="font-medium">Invite New Judge</h4>
             <Button
               icon={<Cancel width={16} />}
-              onClick={() => { setIsAddingJudge(false); setSelectedCategoryIds([]); }}
+              onClick={() => { setIsAddingJudge(false); setPendingCompany(""); setSelectedCategoryIds([]); }}
               disabled={addJudgeMutation.isLoading}
             >
               Cancel
             </Button>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-neutral-400">Company (optional)</label>
+            <input
+              type="text"
+              value={pendingCompany}
+              onChange={(e) => setPendingCompany(e.target.value)}
+              placeholder="e.g. Acme Corp"
+              maxLength={200}
+              className={inputStyles}
+              disabled={addJudgeMutation.isLoading}
+            />
           </div>
           <UserSearch
             hackathonId={hackathonId}
@@ -166,6 +182,9 @@ const JudgeManager = ({ hackathonId }: JudgeManagerProps) => {
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-white truncate">{judge.user.name}</div>
                     <div className="text-sm text-gray-400 truncate">{judge.user.email}</div>
+                    {(judge as any).company && (
+                      <div className="mt-0.5 text-xs text-neutral-400">{(judge as any).company}</div>
+                    )}
                     {judge.inviter && (
                       <div className="mt-1">
                         <span className="inline-block rounded-full bg-blue-600/20 px-2 py-1 text-xs text-blue-400">

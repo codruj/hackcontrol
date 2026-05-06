@@ -185,6 +185,7 @@ const DashUrl = () => {
               categories={(hackathon as any).categories || undefined}
               organizers={(hackathon as any).organizers || undefined}
               judges_info={(hackathon as any).judges_info || undefined}
+              mentors_info={(hackathon as any).mentors_info || undefined}
               timeline={(hackathon as any).timeline || undefined}
               sponsors={(hackathon as any).sponsors || undefined}
               sponsors_text={(hackathon as any).sponsors_text || undefined}

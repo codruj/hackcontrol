@@ -18,7 +18,7 @@ async function assertHackathonOwner(
 
 export const mentorRouter = createTRPCRouter({
   addMentor: organizerProcedure
-    .input(z.object({ hackathonId: z.string(), userId: z.string() }))
+    .input(z.object({ hackathonId: z.string(), userId: z.string(), company: z.string().max(200).optional() }))
     .mutation(async ({ ctx, input }) => {
       await assertHackathonOwner(ctx as any, input.hackathonId);
       const existing = await ctx.prisma.mentor.findUnique({
@@ -26,7 +26,7 @@ export const mentorRouter = createTRPCRouter({
       });
       if (existing) throw new TRPCError({ code: "CONFLICT", message: "User is already a mentor for this hackathon" });
       return ctx.prisma.mentor.create({
-        data: { userId: input.userId, hackathonId: input.hackathonId, invitedById: ctx.session.user.id },
+        data: { userId: input.userId, hackathonId: input.hackathonId, invitedById: ctx.session.user.id, company: input.company ?? null },
         include: { user: { select: { id: true, name: true, email: true } } },
       });
     }),

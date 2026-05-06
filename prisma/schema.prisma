@@ -24,6 +24,7 @@ model Hackathon {
   categories          String?
   organizers          String?
   judges_info         String?
+  mentors_info        String?
   timeline            Json?
   sponsors            Json?
   sponsors_text       String?
@@ -183,6 +184,7 @@ model Judge {
   userId          String
   hackathonId     String
   invitedBy       String
+  company         String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   hackathon       Hackathon       @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
@@ -355,6 +357,7 @@ model Mentor {
   userId      String
   hackathonId String
   invitedById String
+  company     String?
   bio         String?
   expertise   String?
   createdAt   DateTime     @default(now())
