@@ -69,7 +69,7 @@ const MentorsPage = () => {
         <title>{hackathon.name} – Mentors</title>
       </Head>
 
-      <div className="mt-16 flex w-full flex-col justify-between space-y-3 border-b border-neutral-800 px-6 py-4 md:flex-row md:items-center md:space-y-0">
+      <div className="mt-12 flex w-full flex-col justify-between gap-3 border-b border-neutral-800 px-4 py-3 sm:mt-14 sm:px-6 md:flex-row md:items-center md:gap-0">
         <div className="flex items-center space-x-4">
           <Link href={`/app/${hackathon.url}`}>
             <ArrowLeft width={24} className="cursor-pointer text-white transition-all hover:-translate-x-0.5" />

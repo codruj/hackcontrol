@@ -84,7 +84,7 @@ const Dashboard = () => {
       <Head>
         <title>Dashboard - Project Hackathon</title>
       </Head>
-      <div className="mt-16 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-800 px-6 py-4 sm:flex-nowrap sm:gap-0">
+      <div className="mt-12 flex w-full flex-wrap items-center justify-between gap-2 border-b border-neutral-800 px-4 py-3 sm:mt-14 sm:px-6 sm:flex-nowrap">
         <h1 className="text-2xl font-medium">Dashboard</h1>
         <div className="flex items-center space-x-2">
           <EnterKey />

@@ -155,7 +155,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero */}
-      <div className="flex flex-col items-center justify-center space-y-5 py-20 px-4">
+      <div className="flex flex-col items-center justify-center space-y-5 px-4 py-14 sm:py-20">
         <Up>
           <Image
             className="relative z-20"

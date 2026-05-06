@@ -534,7 +534,7 @@ const VolunteerTaskBoard = ({
         {isLoading ? (
           <div className="py-12 text-center text-neutral-400">Loading tasks...</div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <TaskColumn status="TODO" tasks={byStatus("TODO")} {...columnProps} />
             <TaskColumn status="IN_PROGRESS" tasks={byStatus("IN_PROGRESS")} {...columnProps} />
             <TaskColumn status="DONE" tasks={byStatus("DONE")} {...columnProps} />

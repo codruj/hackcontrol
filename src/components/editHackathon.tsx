@@ -180,7 +180,7 @@ const EditHackathon = (props: EditHackathonProps) => {
       wide
     >
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="mb-2 w-full grid grid-cols-5 md:grid-cols-10 h-auto gap-1 p-1">
+        <TabsList className="mb-2 w-full flex flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="info" className="text-xs px-2 py-2">General</TabsTrigger>
           <TabsTrigger value="rules" className="text-xs px-2 py-2">Rules</TabsTrigger>
           <TabsTrigger value="details" className="text-xs px-2 py-2">Details</TabsTrigger>

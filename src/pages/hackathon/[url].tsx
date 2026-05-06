@@ -88,7 +88,7 @@ export default function PublicHackathonPage() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col items-center pb-8 pt-24">
+    <div className="flex min-h-screen flex-col items-center pb-8 pt-16 sm:pt-20 md:pt-24">
       <div className="w-full max-w-4xl px-4">
         <Link href={backHref} className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
           <ArrowLeft width={16} />

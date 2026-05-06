@@ -99,7 +99,7 @@ const SendProject = (hackathonProps: iSendProject) => {
     <>
       {!hackathonProps.is_finished ? (
         <form
-          className="flex w-120 flex-col space-y-4 rounded-md border border-neutral-800 p-5"
+          className="flex w-full max-w-lg flex-col space-y-4 rounded-md border border-neutral-800 p-5"
           onSubmit={handleSubmit(onSubmit)}
         >
           <div className="border-b border-neutral-800 pb-3">
@@ -291,7 +291,7 @@ const SendProject = (hackathonProps: iSendProject) => {
           <Tip>You can only submit 1 project per hackathon.</Tip>
         </form>
       ) : (
-        <div className="flex w-120 flex-col space-y-4 rounded-md border border-neutral-800 p-5">
+        <div className="flex w-full max-w-lg flex-col space-y-4 rounded-md border border-neutral-800 p-5">
           <div className="border-b border-neutral-800 pb-3">
             <h1 className="text-2xl font-medium">{hackathonProps.name}</h1>
             {hackathonProps.description && (

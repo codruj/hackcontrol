@@ -80,7 +80,7 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   return (
-    <div className="container mx-auto mt-8 max-w-4xl px-6 space-y-6">
+    <div className="container mx-auto mt-8 max-w-4xl px-4 sm:px-6 space-y-6">
       {/* Tab navigation */}
       <div className="border-b border-neutral-800">
         <nav className="flex gap-0 overflow-x-auto">

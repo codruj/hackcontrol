@@ -17,41 +17,21 @@ const ThemeToggle = () => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="h-8 w-8" />;
+  if (!mounted) return <div className="h-7 w-7" />;
 
   return (
     <button
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      className="rounded-md p-1.5 text-gray-400 transition-colors hover:text-white"
+      className="rounded-md p-1 text-gray-400 transition-colors hover:text-white"
       aria-label="Toggle theme"
     >
       {resolvedTheme === "dark" ? (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="4" />
           <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
         </svg>
       ) : (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
       )}
@@ -61,43 +41,17 @@ const ThemeToggle = () => {
 
 const InstitutionLogos = () => {
   return (
-    <div className="flex items-center space-x-3">
+    <div className="flex items-center space-x-2">
       {/* AIRI */}
-      <div className="relative h-10 w-20 flex-shrink-0">
-        <Image
-          src="/images/airi_alb.png"
-          alt="AIRI"
-          fill
-          className="hidden object-contain object-center dark:block"
-          sizes="64px"
-        />
-        <Image
-          src="/images/airi_negru.png"
-          alt="AIRI"
-          fill
-          className="block object-contain object-center dark:hidden"
-          sizes="64px"
-        />
+      <div className="relative h-6 w-14 flex-shrink-0 sm:h-8 sm:w-16">
+        <Image src="/images/airi_alb.png" alt="AIRI" fill className="hidden object-contain object-center dark:block" sizes="64px" />
+        <Image src="/images/airi_negru.png" alt="AIRI" fill className="block object-contain object-center dark:hidden" sizes="64px" />
       </div>
-
-      <span className="h-5 w-px flex-shrink-0 bg-neutral-600" />
-
+      <span className="h-4 w-px flex-shrink-0 bg-neutral-600" />
       {/* UTCN */}
-      <div className="relative h-8 w-12 flex-shrink-0">
-        <Image
-          src="/images/logo_ut_alb.png"
-          alt="UTCN"
-          fill
-          className="hidden object-contain object-center dark:block"
-          sizes="48px"
-        />
-        <Image
-          src="/images/logo_ut_negru.png"
-          alt="UTCN"
-          fill
-          className="block object-contain object-center dark:hidden"
-          sizes="48px"
-        />
+      <div className="relative h-5 w-8 flex-shrink-0 sm:h-7 sm:w-10">
+        <Image src="/images/logo_ut_alb.png" alt="UTCN" fill className="hidden object-contain object-center dark:block" sizes="48px" />
+        <Image src="/images/logo_ut_negru.png" alt="UTCN" fill className="block object-contain object-center dark:hidden" sizes="48px" />
       </div>
     </div>
   );
@@ -110,7 +64,7 @@ const HelpModal = () => {
       <Dialog.Trigger asChild>
         <button
           aria-label="Help"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 text-xs font-semibold text-gray-400 transition-colors hover:border-neutral-500 hover:text-white"
+          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-neutral-700 text-xs font-semibold text-gray-400 transition-colors hover:border-neutral-500 hover:text-white"
         >
           ?
         </button>
@@ -130,10 +84,7 @@ const HelpModal = () => {
             Want to organize a hackathon through our platform? Contact{" "}
             <span className="font-medium text-white">Codruța Jucan</span>{" "}
             at{" "}
-            <a
-              href="mailto:codruta.jucan14@gmail.com"
-              className="text-blue-400 underline hover:text-blue-300"
-            >
+            <a href="mailto:codruta.jucan14@gmail.com" className="text-blue-400 underline hover:text-blue-300">
               codruta.jucan14@gmail.com
             </a>{" "}
             for details.
@@ -149,39 +100,34 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut({
-        callbackUrl: "/",
-      });
-    } catch (error) {
+      await signOut({ callbackUrl: "/" });
+    } catch {
       toast.error("Something went wrong");
     }
   };
 
   return (
-    <header className="fixed top-0 z-50 block w-full bg-neutral-900/80 px-5 py-4 font-medium text-white backdrop-blur-sm">
-      <div className="flex items-center justify-between">
+    <header className="fixed top-0 z-50 block w-full bg-neutral-900/80 px-3 py-2.5 font-medium text-white backdrop-blur-sm sm:px-5 sm:py-3">
+      <div className="flex items-center justify-between gap-2">
+        {/* Left: logo */}
         <Link href="/" underline={false}>
-          <div className="flex items-center space-x-3 transition-all duration-100 hover:text-white">
-            <Image
-              src="/images/phck.svg"
-              width={40}
-              height={40}
-              alt="Project Hackathon Logo"
-            />
+          <div className="flex flex-shrink-0 items-center space-x-2 transition-all duration-100 hover:text-white">
+            <Image src="/images/phck.svg" width={32} height={32} alt="Project Hackathon Logo" className="sm:h-10 sm:w-10" />
             <p className="hidden md:block">Hackcontrol</p>
           </div>
         </Link>
 
-        <div className="flex items-center space-x-4">
+        {/* Right: actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <InstitutionLogos />
           <HelpModal />
           <ThemeToggle />
           {session && (
             <>
               <Up>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   {session.user.role === "ADMIN" && (
-                    <span className="rounded-full bg-green-600 px-2 py-1 text-xs font-medium text-white">
+                    <span className="hidden rounded-full bg-green-600 px-2 py-0.5 text-xs font-medium text-white sm:inline">
                       ADMIN
                     </span>
                   )}
@@ -189,17 +135,19 @@ const Header = () => {
                     src={session.user.image}
                     width={24}
                     height={24}
-                    className="rounded-full"
+                    className="flex-shrink-0 rounded-full"
                     alt={session.user.name}
                   />
                   <p className="hidden md:block">{session.user.name}</p>
                 </div>
               </Up>
               <Up delay={0.2}>
-                <div className="flex items-center space-x-3">
-                  <span className="text-gray-400">|</span>
-                  <Button onClick={handleLogout}>Sign out</Button>
-                </div>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-md border border-neutral-800 bg-neutral-800/20 px-2.5 py-1.5 text-xs font-medium text-white transition-all hover:bg-neutral-800/60 sm:px-4 sm:py-2 sm:text-sm"
+                >
+                  Sign out
+                </button>
               </Up>
             </>
           )}
