@@ -17,6 +17,39 @@ import JudgesDashboard from "@/components/judgesDashboard";
 import VolunteersDashboard from "@/components/volunteersDashboard";
 import MentorsDashboard from "@/components/mentorsDashboard";
 import Loading from "@/components/loading";
+import NextLink from "next/link";
+
+function EnrolledHackathons() {
+  const { data, isLoading } = api.hackathon.getMyEnrollments.useQuery();
+  if (isLoading || !data || data.length === 0) return null;
+  return (
+    <div className="mb-6 border-b border-neutral-800 pb-6">
+      <h1 className="mb-4 text-2xl font-medium">My Hackathons</h1>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {(data as Array<{ id: string; hackathon: { id: string; name: string; url: string; description: string | null; is_finished: boolean; updatedAt: Date } }>).map((e) => (
+          <NextLink key={e.id} href={`/app/${e.hackathon.url}`} className="block">
+            <div className="group h-full cursor-pointer rounded-md bg-white bg-opacity-10 p-4 transition-all hover:bg-opacity-20">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">{e.hackathon.name}</h3>
+                {e.hackathon.is_finished ? (
+                  <span className="rounded bg-neutral-600 px-2 py-0.5 text-xs">Finished</span>
+                ) : (
+                  <span className="rounded bg-green-600 px-2 py-0.5 text-xs">Active</span>
+                )}
+              </div>
+              {e.hackathon.description && (
+                <p className="mt-2 line-clamp-2 text-sm text-gray-400">{e.hackathon.description}</p>
+              )}
+              <p className="mt-2 text-xs text-gray-500">
+                Joined {new Date(e.hackathon.updatedAt).toLocaleDateString()}
+              </p>
+            </div>
+          </NextLink>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const Dashboard = () => {
   const { data: session } = useSession();
@@ -120,6 +153,9 @@ const Dashboard = () => {
             )}
           </div>
         )}
+
+        {/* Enrolled Hackathons Section — for regular participants */}
+        {!canCreateHackathons && <EnrolledHackathons />}
 
         {/* Judge Assignments Section */}
         <JudgesDashboard />

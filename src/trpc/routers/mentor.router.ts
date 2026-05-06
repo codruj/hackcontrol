@@ -238,9 +238,9 @@ export const mentorRouter = createTRPCRouter({
 
       const isOwner = hackathon.creatorId === userId || role === "ADMIN";
 
-      const [mentorRecord, participation] = await Promise.all([
+      const [mentorRecord, enrollment] = await Promise.all([
         ctx.prisma.mentor.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
-        ctx.prisma.participation.findFirst({ where: { creatorId: userId, hackathon_url: hackathon.url } }),
+        ctx.prisma.hackathonEnrollment.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
       ]);
 
       const canSeeFullBookingDetails = isOwner || !!mentorRecord;
@@ -263,7 +263,7 @@ export const mentorRouter = createTRPCRouter({
         bookedBy: canSeeFullBookingDetails || slot.bookedById === userId
           ? slot.bookedBy
           : slot.isBooked ? { id: "", name: "Booked", email: "" } : null,
-        canBook: !!participation && !slot.isBooked,
+        canBook: !!enrollment && !slot.isBooked,
       }));
     }),
 
@@ -276,17 +276,11 @@ export const mentorRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      const hackathon = await ctx.prisma.hackathon.findUnique({
-        where: { id: input.hackathonId },
-        select: { url: true },
+      const enrollment = await ctx.prisma.hackathonEnrollment.findUnique({
+        where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } },
       });
-      if (!hackathon) throw new TRPCError({ code: "NOT_FOUND" });
-
-      const participation = await ctx.prisma.participation.findFirst({
-        where: { creatorId: userId, hackathon_url: hackathon.url },
-      });
-      if (!participation) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "You must be a participant to book a mentor slot" });
+      if (!enrollment) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You must be enrolled in this hackathon to book a mentor slot" });
       }
 
       const slot = await ctx.prisma.mentorSlot.findUnique({ where: { id: input.slotId } });

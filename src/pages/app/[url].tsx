@@ -103,6 +103,12 @@ const DashUrl = () => {
   );
   const isMentor = mentorsList?.some((m: { userId: string }) => m.userId === session?.user?.id) ?? false;
 
+  const { data: enrollment } = api.hackathon.getMyEnrollment.useQuery(
+    { hackathonId: publicData?.hackathon?.id ?? "" },
+    { enabled: !!publicData?.hackathon?.id && !!session?.user },
+  );
+  const isEnrolled = !!enrollment;
+
   const isLoading = publicLoading || (publicData?.isOwner && managementLoading) || (!publicData?.isOwner && judgeLoading);
 
   if (isLoading) {
@@ -511,6 +517,11 @@ const DashUrl = () => {
               FINISHED
             </span>
           )}
+          {isEnrolled && (
+            <span className="rounded-full bg-indigo-600 px-2 py-1 text-xs font-medium text-white">
+              PARTICIPANT
+            </span>
+          )}
           {isVolunteer && (
             <span className="rounded-full bg-purple-600 px-2 py-1 text-xs font-medium text-white">
               VOLUNTEER
@@ -522,51 +533,62 @@ const DashUrl = () => {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <NextLink href={`/chat/${hackathon.url}`}>
-            <button className="rounded-md border border-blue-700 bg-blue-900/20 px-4 py-2 text-sm font-medium text-blue-300 transition-all hover:bg-blue-900/40">
-              Chat
-            </button>
-          </NextLink>
-          <NextLink href={`/mentors/${hackathon.url}`}>
-            <button className="rounded-md border border-amber-700 bg-amber-900/20 px-4 py-2 text-sm font-medium text-amber-300 transition-all hover:bg-amber-900/40">
-              Mentors
-            </button>
-          </NextLink>
-          {isVolunteer && (
-            <NextLink href={`/volunteers/${hackathon.url}`}>
-              <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-900/40">
-                My Tasks
+        {isEnrolled && (
+          <div className="flex items-center gap-2">
+            <NextLink href={`/chat/${hackathon.url}`}>
+              <button className="rounded-md border border-blue-700 bg-blue-900/20 px-4 py-2 text-sm font-medium text-blue-300 transition-all hover:bg-blue-900/40">
+                Chat
               </button>
             </NextLink>
-          )}
-        </div>
+            <NextLink href={`/mentors/${hackathon.url}`}>
+              <button className="rounded-md border border-amber-700 bg-amber-900/20 px-4 py-2 text-sm font-medium text-amber-300 transition-all hover:bg-amber-900/40">
+                Mentors
+              </button>
+            </NextLink>
+            {isVolunteer && (
+              <NextLink href={`/volunteers/${hackathon.url}`}>
+                <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-900/40">
+                  My Tasks
+                </button>
+              </NextLink>
+            )}
+          </div>
+        )}
       </div>
 
       <AnnouncementDisplay hackathonUrl={hackathon.url} />
 
-      <div className="container mx-auto mt-6 max-w-4xl px-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <NextLink href={`/chat/${hackathon.url}`} className="block">
-            <div className="group rounded-lg border border-neutral-800 p-5 transition-colors hover:border-blue-700/50 hover:bg-blue-900/10">
-              <div className="mb-2 flex items-center gap-3">
-                <span className="text-2xl">💬</span>
-                <h3 className="font-semibold text-white">Chat</h3>
+      {isEnrolled ? (
+        <div className="container mx-auto mt-6 max-w-4xl px-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <NextLink href={`/chat/${hackathon.url}`} className="block">
+              <div className="rounded-lg border border-neutral-800 p-5 transition-colors hover:border-blue-700/50 hover:bg-blue-900/10">
+                <div className="mb-2 flex items-center gap-3">
+                  <span className="text-2xl">💬</span>
+                  <h3 className="font-semibold text-white">Chat</h3>
+                </div>
+                <p className="text-sm text-neutral-400">Talk to mentors, volunteers, and fellow participants in real time.</p>
               </div>
-              <p className="text-sm text-neutral-400">Join the hackathon chat channels — talk to mentors, volunteers, and fellow participants.</p>
-            </div>
-          </NextLink>
-          <NextLink href={`/mentors/${hackathon.url}`} className="block">
-            <div className="group rounded-lg border border-neutral-800 p-5 transition-colors hover:border-amber-700/50 hover:bg-amber-900/10">
-              <div className="mb-2 flex items-center gap-3">
-                <span className="text-2xl">🎓</span>
-                <h3 className="font-semibold text-white">Mentors</h3>
+            </NextLink>
+            <NextLink href={`/mentors/${hackathon.url}`} className="block">
+              <div className="rounded-lg border border-neutral-800 p-5 transition-colors hover:border-amber-700/50 hover:bg-amber-900/10">
+                <div className="mb-2 flex items-center gap-3">
+                  <span className="text-2xl">🎓</span>
+                  <h3 className="font-semibold text-white">Mentors</h3>
+                </div>
+                <p className="text-sm text-neutral-400">Browse available mentors and book a one-on-one session for your team.</p>
               </div>
-              <p className="text-sm text-neutral-400">Browse available mentors and book a one-on-one session for your team.</p>
-            </div>
-          </NextLink>
+            </NextLink>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="container mx-auto mt-6 max-w-4xl px-6">
+          <div className="rounded-lg border border-dashed border-neutral-700 p-6 text-center">
+            <p className="mb-1 font-medium text-white">You haven't joined this hackathon yet</p>
+            <p className="text-sm text-neutral-400">Register using the hackathon key from your dashboard to access chat, mentors, and more.</p>
+          </div>
+        </div>
+      )}
 
       <HackathonInfo
         hackathon={hackathon}

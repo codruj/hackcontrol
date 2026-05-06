@@ -44,6 +44,7 @@ model Hackathon {
   mentors             Mentor[]
   mentorSlots         MentorSlot[]
   chatChannels        ChatChannel[]
+  enrollments         HackathonEnrollment[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -164,6 +165,7 @@ model User {
   sessions         Session[]
   invitedVolunteers    Volunteer[]     @relation("VolunteerInviter")
   volunteerAssignments Volunteer[]
+  enrollments          HackathonEnrollment[]
   createdVolunteerTasks VolunteerTask[] @relation("VolunteerTaskCreator")
   invitedMentors       Mentor[]        @relation("MentorInviter")
   mentorAssignments    Mentor[]
@@ -294,6 +296,18 @@ model VolunteerTaskAssignment {
 
   @@id([taskId, volunteerId])
   @@map("volunteer_task_assignments")
+}
+
+model HackathonEnrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  hackathonId String
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hackathonId])
+  @@map("hackathon_enrollments")
 }
 
 enum ChannelType {

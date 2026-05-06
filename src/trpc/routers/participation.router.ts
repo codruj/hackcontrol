@@ -49,14 +49,30 @@ export const participationRouter = createTRPCRouter({
   // Create participation =>
   createParticipation: publicProcedure
     .input(newParticipationSchema)
-    .mutation(({ ctx, input }) => {
-      return ctx.prisma.participation.create({
+    .mutation(async ({ ctx, input }) => {
+      const participation = await ctx.prisma.participation.create({
         data: {
           ...input,
           creatorId: ctx.session?.user?.id,
           creatorName: ctx.session?.user?.name,
         },
       });
+
+      if (ctx.session?.user?.id) {
+        const hackathon = await ctx.prisma.hackathon.findUnique({
+          where: { url: input.hackathon_url },
+          select: { id: true },
+        });
+        if (hackathon) {
+          await ctx.prisma.hackathonEnrollment.upsert({
+            where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: hackathon.id } },
+            create: { userId: ctx.session.user.id, hackathonId: hackathon.id },
+            update: {},
+          });
+        }
+      }
+
+      return participation;
     }),
   //------
   // Update participation (judges only) =>

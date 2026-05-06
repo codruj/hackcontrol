@@ -814,4 +814,53 @@ export const hackathonRouter = createTRPCRouter({
         totalEligibleSubmissions: ranked.length,
       };
     }),
+
+  //------
+  // Enroll in hackathon (any logged-in user) =>
+  enrollInHackathon: protectedProcedure
+    .input(z.object({ url: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const hackathon = await ctx.prisma.hackathon.findUnique({
+        where: { url: input.url },
+        select: { id: true, name: true, is_finished: true, verified: true },
+      });
+      if (!hackathon) {
+        throw new Error("Hackathon not found. Check the key and try again.");
+      }
+      if (hackathon.is_finished) {
+        throw new Error("This hackathon has already ended.");
+      }
+
+      await ctx.prisma.hackathonEnrollment.upsert({
+        where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: hackathon.id } },
+        create: { userId: ctx.session.user.id, hackathonId: hackathon.id },
+        update: {},
+      });
+
+      return { url: input.url, name: hackathon.name };
+    }),
+
+  //------
+  // Get hackathons the current user is enrolled in =>
+  getMyEnrollments: protectedProcedure.query(({ ctx }) =>
+    ctx.prisma.hackathonEnrollment.findMany({
+      where: { userId: ctx.session.user.id },
+      include: {
+        hackathon: {
+          select: { id: true, name: true, url: true, description: true, is_finished: true, updatedAt: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ),
+
+  //------
+  // Check if current user is enrolled in a specific hackathon =>
+  getMyEnrollment: protectedProcedure
+    .input(z.object({ hackathonId: z.string() }))
+    .query(({ ctx, input }) =>
+      ctx.prisma.hackathonEnrollment.findUnique({
+        where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: input.hackathonId } },
+      }),
+    ),
 });

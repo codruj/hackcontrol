@@ -56,20 +56,22 @@ async function checkAccess(
   });
   if (hackathon?.creatorId === userId) return true;
 
-  const [mentor, judge, volunteer, participation] = await Promise.all([
+  const [mentor, judge, volunteer, enrollment] = await Promise.all([
     prisma.mentor.findUnique({ where: { userId_hackathonId: { userId, hackathonId } } }),
     prisma.judge.findUnique({ where: { userId_hackathonId: { userId, hackathonId } } }),
     prisma.volunteer.findUnique({ where: { userId_hackathonId: { userId, hackathonId } } }),
-    prisma.participation.findFirst({ where: { creatorId: userId, hackathon_url: hackathonUrl } }),
+    prisma.hackathonEnrollment.findUnique({ where: { userId_hackathonId: { userId, hackathonId } } }),
   ]);
+
+  const isEnrolled = !!enrollment || !!mentor || !!judge || !!volunteer;
 
   switch (type) {
     case "MENTORS_PARTICIPANTS":
-      return true; // open to all authenticated users
+      return isEnrolled;
     case "MENTORS_JUDGES":
       return !!mentor || !!judge;
     case "VOLUNTEERS_PARTICIPANTS":
-      return true; // open to all authenticated users
+      return isEnrolled;
     case "VOLUNTEERS_ONLY":
       return !!volunteer;
     case "TEAM_ONLY": {
@@ -107,16 +109,19 @@ export const chatRouter = createTRPCRouter({
 
       const isOwner = hackathon.creatorId === userId || role === "ADMIN";
 
-      const [mentor, judge, volunteer, participation] = await Promise.all([
+      const [mentor, judge, volunteer, enrollment, participation] = await Promise.all([
         ctx.prisma.mentor.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
         ctx.prisma.judge.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
         ctx.prisma.volunteer.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
+        ctx.prisma.hackathonEnrollment.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
         ctx.prisma.participation.findFirst({ where: { creatorId: userId, hackathon_url: hackathon.url } }),
       ]);
 
+      const isEnrolled = isOwner || !!enrollment || !!mentor || !!judge || !!volunteer;
+      if (!isEnrolled) return [];
+
       const typesToCreate: { type: ChannelType; participationId?: string }[] = [];
 
-      // MENTORS_PARTICIPANTS and VOLUNTEERS_PARTICIPANTS are open to all logged-in users for the hackathon
       typesToCreate.push({ type: "MENTORS_PARTICIPANTS" });
       typesToCreate.push({ type: "VOLUNTEERS_PARTICIPANTS" });
 
