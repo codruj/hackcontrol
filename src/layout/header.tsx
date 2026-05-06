@@ -2,9 +2,11 @@ import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import * as Dialog from "@radix-ui/react-dialog";
 
 import Up from "@/animations/up";
 import { Button, Link } from "@/ui";
+import { Cancel } from "@/ui/icons";
 import { toast } from "sonner";
 
 const ThemeToggle = () => {
@@ -101,6 +103,47 @@ const InstitutionLogos = () => {
   );
 };
 
+const HelpModal = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button
+          aria-label="Help"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 text-xs font-semibold text-gray-400 transition-colors hover:border-neutral-500 hover:text-white"
+        >
+          ?
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-midnight/70 backdrop-blur-sm data-[state=open]:animate-overlayShow" />
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border border-neutral-800 bg-midnight p-6 shadow-xl focus:outline-none data-[state=open]:animate-contentShow">
+          <div className="mb-4 flex items-center justify-between">
+            <Dialog.Title className="text-lg font-medium">Organize a hackathon</Dialog.Title>
+            <Dialog.Close asChild>
+              <button className="text-neutral-400 transition-colors hover:text-white">
+                <Cancel width={20} />
+              </button>
+            </Dialog.Close>
+          </div>
+          <p className="text-sm leading-relaxed text-gray-300">
+            Want to organize a hackathon through our platform? Contact{" "}
+            <span className="font-medium text-white">Codruța Jucan</span>{" "}
+            at{" "}
+            <a
+              href="mailto:codruta.jucan14@gmail.com"
+              className="text-blue-400 underline hover:text-blue-300"
+            >
+              codruta.jucan14@gmail.com
+            </a>{" "}
+            for details.
+          </p>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+};
+
 const Header = () => {
   const { data: session } = useSession();
 
@@ -131,6 +174,7 @@ const Header = () => {
 
         <div className="flex items-center space-x-4">
           <InstitutionLogos />
+          <HelpModal />
           <ThemeToggle />
           {session && (
             <>
