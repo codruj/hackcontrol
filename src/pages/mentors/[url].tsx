@@ -17,6 +17,8 @@ const MentorsPage = () => {
   const router = useRouter();
   const { url } = router.query;
   const { data: session } = useSession();
+  const [tab, setTab] = useState<Tab>("book");
+  const [tabInitialised, setTabInitialised] = useState(false);
 
   const { data: publicData, isLoading: publicLoading } = api.hackathon.getHackathonPublic.useQuery(
     { url: url as string },
@@ -32,6 +34,18 @@ const MentorsPage = () => {
 
   const isLoading = publicLoading || mentorsLoading;
 
+  const userId = session?.user?.id ?? "";
+  const role = session?.user?.role ?? "USER";
+  const isOwner = publicData?.isOwner ?? false;
+  const isAdmin = role === "ADMIN";
+  const isOrganizer = isAdmin || (role === "ORGANIZER" && isOwner);
+  const isMentor = (mentors as Array<{ userId: string }> | undefined)?.some((m) => m.userId === userId) ?? false;
+
+  if (!tabInitialised && !isLoading && !!publicData?.hackathon) {
+    setTabInitialised(true);
+    if (isMentor) setTab("availability");
+  }
+
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center"><Loading /></div>;
   }
@@ -42,17 +56,6 @@ const MentorsPage = () => {
   }
 
   const hackathon = publicData.hackathon;
-  const userId = session.user.id;
-  const role = session.user.role;
-  const isOwner = publicData.isOwner;
-  const isAdmin = role === "ADMIN";
-  const isOrganizer = isAdmin || (role === "ORGANIZER" && isOwner);
-  const isMentor = (mentors as Array<{ userId: string }> | undefined)?.some((m) => m.userId === userId) ?? false;
-
-  const hasAccess = isOrganizer || isMentor;
-
-  const defaultTab: Tab = isMentor ? "availability" : "book";
-  const [tab, setTab] = useState<Tab>(defaultTab);
 
   const tabs: { id: Tab; label: string; show: boolean }[] = [
     { id: "book", label: "Book a Mentor", show: true },
