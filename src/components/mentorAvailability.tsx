@@ -19,6 +19,8 @@ interface Slot {
   endTime: Date;
   topic: string | null;
   isBooked: boolean;
+  bookingTeamName: string | null;
+  bookingPurpose: string | null;
   bookingNote: string | null;
   bookedBy: { id: string; name: string | null; email: string | null } | null;
 }
@@ -187,12 +189,11 @@ const MentorAvailability = ({ hackathonId }: MentorAvailabilityProps) => {
                     </div>
                     {slot.topic && <div className="mt-1 text-sm text-neutral-400">{slot.topic}</div>}
                     {slot.isBooked && slot.bookedBy && (
-                      <div className="mt-2 rounded-lg border border-amber-800/30 bg-amber-900/10 p-2 text-sm">
-                        <span className="text-amber-300">Booked by: </span>
-                        <span className="text-white">{slot.bookedBy.name || slot.bookedBy.email}</span>
-                        {slot.bookingNote && (
-                          <p className="mt-1 text-neutral-300">"{slot.bookingNote}"</p>
-                        )}
+                      <div className="mt-2 space-y-0.5 rounded-lg border border-amber-800/30 bg-amber-900/10 p-2 text-sm">
+                        <p><span className="text-amber-300">Booked by: </span><span className="text-white">{slot.bookedBy.name || slot.bookedBy.email}</span></p>
+                        {slot.bookingTeamName && <p><span className="text-neutral-500">Team: </span><span className="text-neutral-200">{slot.bookingTeamName}</span></p>}
+                        {slot.bookingPurpose && <p><span className="text-neutral-500">Purpose: </span><span className="text-neutral-200">{slot.bookingPurpose}</span></p>}
+                        {slot.bookingNote && <p><span className="text-neutral-500">Note: </span><span className="text-neutral-300">"{slot.bookingNote}"</span></p>}
                       </div>
                     )}
                   </div>

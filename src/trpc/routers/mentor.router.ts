@@ -271,6 +271,8 @@ export const mentorRouter = createTRPCRouter({
     .input(z.object({
       slotId: z.string(),
       hackathonId: z.string(),
+      bookingTeamName: z.string().max(100).optional(),
+      bookingPurpose: z.string().max(300).optional(),
       bookingNote: z.string().max(500).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -291,10 +293,48 @@ export const mentorRouter = createTRPCRouter({
         throw new TRPCError({ code: "CONFLICT", message: "This slot is already booked" });
       }
 
-      return ctx.prisma.mentorSlot.update({
-        where: { id: input.slotId },
-        data: { isBooked: true, bookedById: userId, bookingNote: input.bookingNote },
+      // Auto-detect the user's team for this hackathon
+      const teamMembership = await ctx.prisma.teamMembership.findFirst({
+        where: { userId, team: { hackathonId: input.hackathonId } },
+        include: { team: true },
       });
+      const teamId = teamMembership?.teamId ?? null;
+
+      const updatedSlot = await ctx.prisma.mentorSlot.update({
+        where: { id: input.slotId },
+        data: {
+          isBooked: true,
+          bookedById: userId,
+          bookedByTeamId: teamId,
+          bookingTeamName: teamMembership?.team.name ?? input.bookingTeamName,
+          bookingPurpose: input.bookingPurpose,
+          bookingNote: input.bookingNote,
+        },
+      });
+
+      // Create a TEAM_MENTOR channel if the user is on a team
+      if (teamId) {
+        const key = `${input.hackathonId}:TEAM_MENTOR:${input.slotId}`;
+        const slot = await ctx.prisma.mentorSlot.findUnique({
+          where: { id: input.slotId },
+          include: { mentor: { include: { user: { select: { name: true } } } } },
+        });
+        const mentorName = slot?.mentor.user.name ?? "Mentor";
+        await ctx.prisma.chatChannel.upsert({
+          where: { key },
+          create: {
+            key,
+            hackathonId: input.hackathonId,
+            type: "TEAM_MENTOR",
+            teamId,
+            slotId: input.slotId,
+            name: `${teamMembership!.team.name} + ${mentorName}`,
+          },
+          update: {},
+        });
+      }
+
+      return updatedSlot;
     }),
 
   cancelBooking: protectedProcedure
@@ -325,7 +365,7 @@ export const mentorRouter = createTRPCRouter({
 
       return ctx.prisma.mentorSlot.update({
         where: { id: input.slotId },
-        data: { isBooked: false, bookedById: null, bookingNote: null },
+        data: { isBooked: false, bookedById: null, bookedByTeamId: null, bookingTeamName: null, bookingPurpose: null, bookingNote: null },
       });
     }),
 });

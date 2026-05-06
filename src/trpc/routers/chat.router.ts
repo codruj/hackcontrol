@@ -3,47 +3,22 @@ import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "..";
 import type { ChannelType } from "@prisma/client";
 
-const CHANNEL_LABELS: Record<ChannelType, string> = {
-  MENTORS_PARTICIPANTS: "Mentors & Participants",
-  MENTORS_JUDGES: "Mentors & Judges",
-  VOLUNTEERS_PARTICIPANTS: "Volunteers & Participants",
-  VOLUNTEERS_ONLY: "Volunteer Team",
-  TEAM_ONLY: "Team Channel",
-};
-
-function channelKey(hackathonId: string, type: ChannelType, participationId?: string | null) {
-  return `${hackathonId}:${type}:${participationId ?? "global"}`;
+function channelKey(hackathonId: string, type: ChannelType, suffix?: string | null) {
+  return `${hackathonId}:${type}:${suffix ?? "global"}`;
 }
 
-async function getOrCreate(
-  prisma: any,
-  hackathonId: string,
-  type: ChannelType,
-  participationId?: string | null,
-) {
-  const key = channelKey(hackathonId, type, participationId);
+async function getOrCreateGeneral(prisma: any, hackathonId: string, type: ChannelType, label: string) {
+  const key = channelKey(hackathonId, type);
   const existing = await prisma.chatChannel.findUnique({ where: { key } });
   if (existing) return existing;
-  return prisma.chatChannel.create({
-    data: {
-      key,
-      hackathonId,
-      type,
-      participationId: participationId ?? null,
-      name: type === "TEAM_ONLY"
-        ? "Team Channel"
-        : CHANNEL_LABELS[type],
-    },
-  });
+  return prisma.chatChannel.create({ data: { key, hackathonId, type, name: label } });
 }
 
 async function checkAccess(
   prisma: any,
   session: { user: { id: string; role: string; email?: string | null } },
   hackathonId: string,
-  hackathonUrl: string,
-  type: ChannelType,
-  participationId?: string | null,
+  channel: { type: ChannelType; teamId: string | null; slotId: string | null },
 ): Promise<boolean> {
   const userId = session.user.id;
   const role = session.user.role;
@@ -65,27 +40,34 @@ async function checkAccess(
 
   const isEnrolled = !!enrollment || !!mentor || !!judge || !!volunteer;
 
-  switch (type) {
+  switch (channel.type) {
     case "MENTORS_PARTICIPANTS":
+    case "VOLUNTEERS_PARTICIPANTS":
       return isEnrolled;
     case "MENTORS_JUDGES":
       return !!mentor || !!judge;
-    case "VOLUNTEERS_PARTICIPANTS":
-      return isEnrolled;
     case "VOLUNTEERS_ONLY":
       return !!volunteer;
     case "TEAM_ONLY": {
-      if (!participationId) return false;
-      const teamParticipation = await prisma.participation.findUnique({
-        where: { id: participationId },
-        select: { creatorId: true, team_members: true },
+      if (!channel.teamId) return false;
+      const membership = await prisma.teamMembership.findFirst({
+        where: { teamId: channel.teamId, userId },
       });
-      if (!teamParticipation) return false;
-      if (teamParticipation.creatorId === userId) return true;
-      const email = session.user.email;
-      if (email) {
-        const members: { email?: string }[] = (teamParticipation.team_members as any)?.members ?? [];
-        return members.some((m) => m.email === email);
+      return !!membership;
+    }
+    case "TEAM_MENTOR": {
+      if (!channel.teamId) return false;
+      const membership = await prisma.teamMembership.findFirst({
+        where: { teamId: channel.teamId, userId },
+      });
+      if (membership) return true;
+      // Mentor who owns the booked slot
+      if (channel.slotId) {
+        const slot = await prisma.mentorSlot.findUnique({
+          where: { id: channel.slotId },
+          include: { mentor: { select: { userId: true } } },
+        });
+        return slot?.mentor.userId === userId;
       }
       return false;
     }
@@ -103,37 +85,69 @@ export const chatRouter = createTRPCRouter({
 
       const hackathon = await ctx.prisma.hackathon.findUnique({
         where: { id: input.hackathonId },
-        select: { creatorId: true, url: true },
+        select: { creatorId: true },
       });
       if (!hackathon) throw new TRPCError({ code: "NOT_FOUND" });
 
       const isOwner = hackathon.creatorId === userId || role === "ADMIN";
 
-      const [mentor, judge, volunteer, enrollment, participation] = await Promise.all([
+      const [mentor, judge, volunteer, enrollment, teamMemberships] = await Promise.all([
         ctx.prisma.mentor.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
         ctx.prisma.judge.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
         ctx.prisma.volunteer.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
         ctx.prisma.hackathonEnrollment.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
-        ctx.prisma.participation.findFirst({ where: { creatorId: userId, hackathon_url: hackathon.url } }),
+        ctx.prisma.teamMembership.findMany({
+          where: { userId, team: { hackathonId: input.hackathonId } },
+          select: { teamId: true },
+        }),
       ]);
 
       const isEnrolled = isOwner || !!enrollment || !!mentor || !!judge || !!volunteer;
       if (!isEnrolled) return [];
 
-      const typesToCreate: { type: ChannelType; participationId?: string }[] = [];
+      // General channels (lazy-created)
+      const generalChannels = await Promise.all([
+        getOrCreateGeneral(ctx.prisma, input.hackathonId, "MENTORS_PARTICIPANTS", "Mentors & Participants"),
+        getOrCreateGeneral(ctx.prisma, input.hackathonId, "VOLUNTEERS_PARTICIPANTS", "Volunteers & Participants"),
+        ...(isOwner || !!mentor || !!judge
+          ? [getOrCreateGeneral(ctx.prisma, input.hackathonId, "MENTORS_JUDGES", "Mentors & Judges")]
+          : []),
+        ...(isOwner || !!volunteer
+          ? [getOrCreateGeneral(ctx.prisma, input.hackathonId, "VOLUNTEERS_ONLY", "Volunteer Team")]
+          : []),
+      ]);
 
-      typesToCreate.push({ type: "MENTORS_PARTICIPANTS" });
-      typesToCreate.push({ type: "VOLUNTEERS_PARTICIPANTS" });
+      // Team-specific channels (pre-created at registration/booking time)
+      const teamIds = teamMemberships.map((m) => m.teamId);
+      let teamChannels: any[] = [];
 
-      if (isOwner || !!mentor || !!judge) typesToCreate.push({ type: "MENTORS_JUDGES" });
-      if (isOwner || !!volunteer) typesToCreate.push({ type: "VOLUNTEERS_ONLY" });
-      if (participation) typesToCreate.push({ type: "TEAM_ONLY", participationId: participation.id });
+      if (isOwner) {
+        teamChannels = await ctx.prisma.chatChannel.findMany({
+          where: { hackathonId: input.hackathonId, type: { in: ["TEAM_ONLY", "TEAM_MENTOR"] } },
+        });
+      } else if (teamIds.length > 0) {
+        teamChannels = await ctx.prisma.chatChannel.findMany({
+          where: { hackathonId: input.hackathonId, teamId: { in: teamIds } },
+        });
+      }
 
-      const channels = await Promise.all(
-        typesToCreate.map((t) => getOrCreate(ctx.prisma, input.hackathonId, t.type, t.participationId)),
-      );
+      // Mentors see TEAM_MENTOR channels where they are the booked mentor
+      if (!!mentor && !isOwner) {
+        const mentorSlots = await ctx.prisma.mentorSlot.findMany({
+          where: { mentor: { userId }, hackathonId: input.hackathonId, isBooked: true },
+          select: { id: true },
+        });
+        const slotIds = mentorSlots.map((s: { id: string }) => s.id);
+        if (slotIds.length > 0) {
+          const mentorTeamChannels = await ctx.prisma.chatChannel.findMany({
+            where: { hackathonId: input.hackathonId, type: "TEAM_MENTOR", slotId: { in: slotIds } },
+          });
+          const existingIds = new Set(teamChannels.map((c: any) => c.id));
+          teamChannels = [...teamChannels, ...mentorTeamChannels.filter((c: any) => !existingIds.has(c.id))];
+        }
+      }
 
-      return channels;
+      return [...generalChannels, ...teamChannels];
     }),
 
   getMessages: protectedProcedure
@@ -141,18 +155,11 @@ export const chatRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const channel = await ctx.prisma.chatChannel.findUnique({
         where: { id: input.channelId },
-        select: { hackathonId: true, type: true, participationId: true, hackathon: { select: { url: true } } },
+        select: { hackathonId: true, type: true, teamId: true, slotId: true },
       });
       if (!channel) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const ok = await checkAccess(
-        ctx.prisma,
-        ctx.session,
-        channel.hackathonId,
-        channel.hackathon.url,
-        channel.type,
-        channel.participationId,
-      );
+      const ok = await checkAccess(ctx.prisma, ctx.session, channel.hackathonId, channel);
       if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
 
       return ctx.prisma.chatMessage.findMany({
@@ -168,18 +175,11 @@ export const chatRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const channel = await ctx.prisma.chatChannel.findUnique({
         where: { id: input.channelId },
-        select: { hackathonId: true, type: true, participationId: true, hackathon: { select: { url: true } } },
+        select: { hackathonId: true, type: true, teamId: true, slotId: true },
       });
       if (!channel) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const ok = await checkAccess(
-        ctx.prisma,
-        ctx.session,
-        channel.hackathonId,
-        channel.hackathon.url,
-        channel.type,
-        channel.participationId,
-      );
+      const ok = await checkAccess(ctx.prisma, ctx.session, channel.hackathonId, channel);
       if (!ok) throw new TRPCError({ code: "FORBIDDEN" });
 
       return ctx.prisma.chatMessage.create({

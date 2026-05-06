@@ -45,6 +45,7 @@ model Hackathon {
   mentorSlots         MentorSlot[]
   chatChannels        ChatChannel[]
   enrollments         HackathonEnrollment[]
+  teams               Team[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -171,6 +172,8 @@ model User {
   mentorAssignments    Mentor[]
   bookedSlots          MentorSlot[]    @relation("SlotBooker")
   chatMessages         ChatMessage[]
+  ledTeams             Team[]          @relation("TeamLeader")
+  teamMemberships      TeamMembership[]
 
   @@map("users")
 }
@@ -316,6 +319,35 @@ enum ChannelType {
   VOLUNTEERS_PARTICIPANTS
   VOLUNTEERS_ONLY
   TEAM_ONLY
+  TEAM_MENTOR
+}
+
+model Team {
+  id          String         @id @default(cuid())
+  hackathonId String
+  name        String
+  leaderId    String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  hackathon   Hackathon      @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  leader      User           @relation("TeamLeader", fields: [leaderId], references: [id])
+  memberships TeamMembership[]
+  mentorSlots MentorSlot[]
+
+  @@unique([hackathonId, name])
+  @@map("teams")
+}
+
+model TeamMembership {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_memberships")
 }
 
 model Mentor {
@@ -343,14 +375,18 @@ model MentorSlot {
   startTime   DateTime
   endTime     DateTime
   topic       String?
-  isBooked    Boolean   @default(false)
-  bookedById  String?
-  bookingNote String?
+  isBooked         Boolean   @default(false)
+  bookedById       String?
+  bookedByTeamId   String?
+  bookingTeamName  String?
+  bookingPurpose   String?
+  bookingNote      String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   mentor      Mentor    @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   bookedBy    User?     @relation("SlotBooker", fields: [bookedById], references: [id])
+  bookedByTeam Team?    @relation(fields: [bookedByTeamId], references: [id], onDelete: SetNull)
 
   @@map("mentor_slots")
 }
@@ -361,6 +397,8 @@ model ChatChannel {
   hackathonId     String
   type            ChannelType
   participationId String?
+  teamId          String?
+  slotId          String?
   name            String
   createdAt       DateTime    @default(now())
   hackathon       Hackathon   @relation(fields: [hackathonId], references: [id], onDelete: Cascade)

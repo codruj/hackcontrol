@@ -8,6 +8,7 @@ const CHANNEL_ICONS: Record<string, string> = {
   VOLUNTEERS_PARTICIPANTS: "🤝",
   VOLUNTEERS_ONLY: "🟣",
   TEAM_ONLY: "🔒",
+  TEAM_MENTOR: "🎓",
 };
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ const CHANNEL_LABELS: Record<string, string> = {
   VOLUNTEERS_PARTICIPANTS: "Volunteers & Participants",
   VOLUNTEERS_ONLY: "Volunteer Team",
   TEAM_ONLY: "Team Channel",
+  TEAM_MENTOR: "Mentor Session",
 };
 
 interface Channel {
@@ -200,7 +202,11 @@ const ChatView = ({ hackathonId, currentUserId }: ChatViewProps) => {
               }`}
             >
               <span className="text-base">{CHANNEL_ICONS[channel.type] ?? "💬"}</span>
-              <span className="truncate">{CHANNEL_LABELS[channel.type] ?? channel.name}</span>
+              <span className="truncate">
+                {channel.type === "TEAM_ONLY" || channel.type === "TEAM_MENTOR"
+                  ? channel.name
+                  : (CHANNEL_LABELS[channel.type] ?? channel.name)}
+              </span>
             </button>
           ))}
         </nav>
@@ -213,9 +219,11 @@ const ChatView = ({ hackathonId, currentUserId }: ChatViewProps) => {
             <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3">
               <span className="text-lg">{CHANNEL_ICONS[activeChannel.type] ?? "💬"}</span>
               <span className="font-medium text-white">
-                {CHANNEL_LABELS[activeChannel.type] ?? activeChannel.name}
+                {activeChannel.type === "TEAM_ONLY" || activeChannel.type === "TEAM_MENTOR"
+                  ? activeChannel.name
+                  : (CHANNEL_LABELS[activeChannel.type] ?? activeChannel.name)}
               </span>
-              {activeChannel.type === "TEAM_ONLY" && (
+              {(activeChannel.type === "TEAM_ONLY" || activeChannel.type === "TEAM_MENTOR") && (
                 <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">Private</span>
               )}
             </div>

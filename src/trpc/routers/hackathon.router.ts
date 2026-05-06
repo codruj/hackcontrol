@@ -818,27 +818,90 @@ export const hackathonRouter = createTRPCRouter({
   //------
   // Enroll in hackathon (any logged-in user) =>
   enrollInHackathon: protectedProcedure
-    .input(z.object({ url: z.string() }))
+    .input(z.object({
+      url: z.string(),
+      teamName: z.string().min(1).max(60).optional(),
+      memberIds: z.array(z.string()).max(10).optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       const hackathon = await ctx.prisma.hackathon.findUnique({
         where: { url: input.url },
-        select: { id: true, name: true, is_finished: true, verified: true },
+        select: { id: true, name: true, is_finished: true },
       });
-      if (!hackathon) {
-        throw new Error("Hackathon not found. Check the key and try again.");
-      }
-      if (hackathon.is_finished) {
-        throw new Error("This hackathon has already ended.");
-      }
+      if (!hackathon) throw new Error("Hackathon not found. Check the key and try again.");
+      if (hackathon.is_finished) throw new Error("This hackathon has already ended.");
 
+      // Enroll the registering user
       await ctx.prisma.hackathonEnrollment.upsert({
-        where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: hackathon.id } },
-        create: { userId: ctx.session.user.id, hackathonId: hackathon.id },
+        where: { userId_hackathonId: { userId, hackathonId: hackathon.id } },
+        create: { userId, hackathonId: hackathon.id },
         update: {},
       });
 
+      if (input.teamName) {
+        // Prevent joining a second team in the same hackathon
+        const existingMembership = await ctx.prisma.teamMembership.findFirst({
+          where: { userId, team: { hackathonId: hackathon.id } },
+        });
+        if (existingMembership) {
+          throw new Error("You are already in a team for this hackathon.");
+        }
+
+        const team = await ctx.prisma.team.create({
+          data: { hackathonId: hackathon.id, name: input.teamName, leaderId: userId },
+        });
+
+        // Add leader as member
+        await ctx.prisma.teamMembership.create({ data: { teamId: team.id, userId } });
+
+        // Enroll and add remaining members
+        const memberIds = (input.memberIds ?? []).filter((id) => id !== userId);
+        for (const memberId of memberIds) {
+          await ctx.prisma.hackathonEnrollment.upsert({
+            where: { userId_hackathonId: { userId: memberId, hackathonId: hackathon.id } },
+            create: { userId: memberId, hackathonId: hackathon.id },
+            update: {},
+          });
+          await ctx.prisma.teamMembership.upsert({
+            where: { teamId_userId: { teamId: team.id, userId: memberId } },
+            create: { teamId: team.id, userId: memberId },
+            update: {},
+          });
+        }
+
+        // Create TEAM_ONLY channel
+        const key = `${hackathon.id}:TEAM_ONLY:${team.id}`;
+        await ctx.prisma.chatChannel.upsert({
+          where: { key },
+          create: { key, hackathonId: hackathon.id, type: "TEAM_ONLY", teamId: team.id, name: input.teamName },
+          update: {},
+        });
+      }
+
       return { url: input.url, name: hackathon.name };
     }),
+
+  //------
+  // Search users to add as team members =>
+  searchUsersForTeam: protectedProcedure
+    .input(z.object({ query: z.string().min(2) }))
+    .query(({ ctx, input }) =>
+      ctx.prisma.user.findMany({
+        where: {
+          AND: [
+            { id: { not: ctx.session.user.id } },
+            { OR: [
+              { name: { contains: input.query, mode: "insensitive" } },
+              { email: { contains: input.query, mode: "insensitive" } },
+              { username: { contains: input.query, mode: "insensitive" } },
+            ]},
+          ],
+        },
+        select: { id: true, name: true, email: true, username: true },
+        take: 8,
+      }),
+    ),
 
   //------
   // Get hackathons the current user is enrolled in =>

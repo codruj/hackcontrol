@@ -11,6 +11,8 @@ interface Slot {
   endTime: Date;
   topic: string | null;
   isBooked: boolean;
+  bookingTeamName: string | null;
+  bookingPurpose: string | null;
   bookingNote: string | null;
   bookedById: string | null;
   mentor: {
@@ -31,6 +33,8 @@ interface BookDialogProps {
 }
 
 function BookDialog({ slot, currentUserId, hackathonId, onClose, onSuccess }: BookDialogProps) {
+  const [teamName, setTeamName] = useState("");
+  const [purpose, setPurpose] = useState("");
   const [note, setNote] = useState("");
 
   const bookMutation = api.mentor.bookSlot.useMutation({
@@ -63,9 +67,11 @@ function BookDialog({ slot, currentUserId, hackathonId, onClose, onSuccess }: Bo
 
       {isMyBooking ? (
         <div>
-          <div className="mb-3 rounded-lg border border-green-800/40 bg-green-900/10 p-3 text-sm text-green-400">
-            You have booked this slot.
-            {slot.bookingNote && <p className="mt-1 text-neutral-300">Your message: "{slot.bookingNote}"</p>}
+          <div className="mb-3 space-y-1 rounded-lg border border-green-800/40 bg-green-900/10 p-3 text-sm">
+            <p className="font-medium text-green-400">You have booked this slot.</p>
+            {slot.bookingTeamName && <p className="text-neutral-300"><span className="text-neutral-500">Team:</span> {slot.bookingTeamName}</p>}
+            {slot.bookingPurpose && <p className="text-neutral-300"><span className="text-neutral-500">Purpose:</span> {slot.bookingPurpose}</p>}
+            {slot.bookingNote && <p className="text-neutral-300"><span className="text-neutral-500">Note:</span> {slot.bookingNote}</p>}
           </div>
           <Button
             icon={<Cancel width={16} />}
@@ -79,22 +85,57 @@ function BookDialog({ slot, currentUserId, hackathonId, onClose, onSuccess }: Bo
       ) : (
         <div className="space-y-3">
           <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-300">Team name</label>
+            <input
+              type="text"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              maxLength={100}
+              placeholder="Your team name"
+              className="block w-full rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white placeholder-neutral-400 focus:border-neutral-600 focus:outline-none"
+            />
+          </div>
+          <div>
             <label className="mb-1 block text-sm font-medium text-neutral-300">
-              Message / Topic (optional)
+              Session purpose <span className="text-neutral-500">(what would you like help with?)</span>
+            </label>
+            <select
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              className="block w-full rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white focus:border-neutral-600 focus:outline-none"
+            >
+              <option value="">Select a purpose...</option>
+              <option value="Technical review">Technical review</option>
+              <option value="Business model feedback">Business model feedback</option>
+              <option value="Pitch / presentation advice">Pitch / presentation advice</option>
+              <option value="Project ideation">Project ideation</option>
+              <option value="General advice session">General advice session</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-300">
+              Brief project description <span className="text-neutral-500">(optional)</span>
             </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               maxLength={500}
-              placeholder="Briefly describe what you'd like to discuss..."
+              placeholder="Tell the mentor a bit about your project so they can prepare..."
               className="block w-full resize-none rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white placeholder-neutral-400 focus:border-neutral-600 focus:outline-none"
             />
           </div>
           <div className="flex justify-end gap-2">
             <Button onClick={onClose}>Cancel</Button>
             <Button
-              onClick={() => bookMutation.mutate({ slotId: slot.id, hackathonId, bookingNote: note || undefined })}
+              onClick={() => bookMutation.mutate({
+                slotId: slot.id,
+                hackathonId,
+                bookingTeamName: teamName || undefined,
+                bookingPurpose: purpose || undefined,
+                bookingNote: note || undefined,
+              })}
               loadingstatus={bookMutation.isLoading}
               disabled={bookMutation.isLoading}
             >
@@ -195,13 +236,21 @@ const MentorBooking = ({ hackathonId, currentUserId, isOrganizer }: MentorBookin
                 {mentorSlots.filter((s) => s.isBooked).map((slot) => {
                   const start = new Date(slot.startTime);
                   return (
-                    <div key={slot.id} className="flex items-center justify-between rounded-lg border border-neutral-800 px-3 py-2 text-sm">
-                      <span className="text-neutral-300">
-                        {start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}{" "}
-                        {start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                      <span className="text-white">{slot.bookedBy?.name || slot.bookedBy?.email || "Unknown"}</span>
-                      {slot.bookingNote && <span className="max-w-[200px] truncate text-neutral-400">"{slot.bookingNote}"</span>}
+                    <div key={slot.id} className="rounded-lg border border-neutral-800 px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300">
+                          {start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}{" "}
+                          {start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="font-medium text-white">{slot.bookedBy?.name || slot.bookedBy?.email || "Unknown"}</span>
+                      </div>
+                      {(slot.bookingTeamName || slot.bookingPurpose) && (
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                          {slot.bookingTeamName && <span className="text-neutral-400">Team: <span className="text-neutral-200">{slot.bookingTeamName}</span></span>}
+                          {slot.bookingPurpose && <span className="text-neutral-400">Purpose: <span className="text-neutral-200">{slot.bookingPurpose}</span></span>}
+                        </div>
+                      )}
+                      {slot.bookingNote && <p className="mt-0.5 truncate text-xs text-neutral-500">"{slot.bookingNote}"</p>}
                     </div>
                   );
                 })}
