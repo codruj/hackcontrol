@@ -65,11 +65,11 @@ async function checkAccess(
 
   switch (type) {
     case "MENTORS_PARTICIPANTS":
-      return !!mentor || !!participation;
+      return true; // open to all authenticated users
     case "MENTORS_JUDGES":
       return !!mentor || !!judge;
     case "VOLUNTEERS_PARTICIPANTS":
-      return !!volunteer || !!participation;
+      return true; // open to all authenticated users
     case "VOLUNTEERS_ONLY":
       return !!volunteer;
     case "TEAM_ONLY": {
@@ -114,14 +114,13 @@ export const chatRouter = createTRPCRouter({
         ctx.prisma.participation.findFirst({ where: { creatorId: userId, hackathon_url: hackathon.url } }),
       ]);
 
-      const hasAnyRole = isOwner || !!mentor || !!judge || !!volunteer || !!participation;
-      if (!hasAnyRole) return [];
-
       const typesToCreate: { type: ChannelType; participationId?: string }[] = [];
 
-      if (isOwner || !!mentor || !!participation) typesToCreate.push({ type: "MENTORS_PARTICIPANTS" });
+      // MENTORS_PARTICIPANTS and VOLUNTEERS_PARTICIPANTS are open to all logged-in users for the hackathon
+      typesToCreate.push({ type: "MENTORS_PARTICIPANTS" });
+      typesToCreate.push({ type: "VOLUNTEERS_PARTICIPANTS" });
+
       if (isOwner || !!mentor || !!judge) typesToCreate.push({ type: "MENTORS_JUDGES" });
-      if (isOwner || !!volunteer || !!participation) typesToCreate.push({ type: "VOLUNTEERS_PARTICIPANTS" });
       if (isOwner || !!volunteer) typesToCreate.push({ type: "VOLUNTEERS_ONLY" });
       if (participation) typesToCreate.push({ type: "TEAM_ONLY", participationId: participation.id });
 

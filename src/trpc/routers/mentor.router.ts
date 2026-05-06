@@ -238,15 +238,12 @@ export const mentorRouter = createTRPCRouter({
 
       const isOwner = hackathon.creatorId === userId || role === "ADMIN";
 
-      const [mentorRecord, volunteerRecord, judgeRecord, participation] = await Promise.all([
+      const [mentorRecord, participation] = await Promise.all([
         ctx.prisma.mentor.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
-        ctx.prisma.volunteer.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
-        ctx.prisma.judge.findUnique({ where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } } }),
         ctx.prisma.participation.findFirst({ where: { creatorId: userId, hackathon_url: hackathon.url } }),
       ]);
 
-      const hasAccess = isOwner || !!mentorRecord || !!volunteerRecord || !!judgeRecord || !!participation;
-      if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN" });
+      const canSeeFullBookingDetails = isOwner || !!mentorRecord;
 
       const slots = await ctx.prisma.mentorSlot.findMany({
         where: { hackathonId: input.hackathonId },
@@ -254,7 +251,7 @@ export const mentorRouter = createTRPCRouter({
           mentor: {
             include: { user: { select: { id: true, name: true, email: true, image: true } } },
           },
-          bookedBy: isOwner || !!mentorRecord
+          bookedBy: canSeeFullBookingDetails
             ? { select: { id: true, name: true, email: true } }
             : undefined,
         },
@@ -263,9 +260,10 @@ export const mentorRouter = createTRPCRouter({
 
       return slots.map((slot) => ({
         ...slot,
-        bookedBy: isOwner || slot.mentor.userId === userId || slot.bookedById === userId
+        bookedBy: canSeeFullBookingDetails || slot.bookedById === userId
           ? slot.bookedBy
           : slot.isBooked ? { id: "", name: "Booked", email: "" } : null,
+        canBook: !!participation && !slot.isBooked,
       }));
     }),
 

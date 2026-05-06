@@ -357,6 +357,14 @@ const DashUrl = () => {
               JUDGE
             </span>
           </div>
+          <div className="flex items-center gap-2">
+            <NextLink href={`/chat/${hackathon.url}`}>
+              <button className="rounded-md border border-blue-700 bg-blue-900/20 px-4 py-2 text-sm font-medium text-blue-300 transition-all hover:bg-blue-900/40">Chat</button>
+            </NextLink>
+            <NextLink href={`/mentors/${hackathon.url}`}>
+              <button className="rounded-md border border-amber-700 bg-amber-900/20 px-4 py-2 text-sm font-medium text-amber-300 transition-all hover:bg-amber-900/40">Mentors</button>
+            </NextLink>
+          </div>
         </div>
         <div className="container mx-auto mt-8 space-y-8 px-6">
           {/* Submissions Section for Judges */}
@@ -536,6 +544,30 @@ const DashUrl = () => {
       </div>
 
       <AnnouncementDisplay hackathonUrl={hackathon.url} />
+
+      <div className="container mx-auto mt-6 max-w-4xl px-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <NextLink href={`/chat/${hackathon.url}`} className="block">
+            <div className="group rounded-lg border border-neutral-800 p-5 transition-colors hover:border-blue-700/50 hover:bg-blue-900/10">
+              <div className="mb-2 flex items-center gap-3">
+                <span className="text-2xl">💬</span>
+                <h3 className="font-semibold text-white">Chat</h3>
+              </div>
+              <p className="text-sm text-neutral-400">Join the hackathon chat channels — talk to mentors, volunteers, and fellow participants.</p>
+            </div>
+          </NextLink>
+          <NextLink href={`/mentors/${hackathon.url}`} className="block">
+            <div className="group rounded-lg border border-neutral-800 p-5 transition-colors hover:border-amber-700/50 hover:bg-amber-900/10">
+              <div className="mb-2 flex items-center gap-3">
+                <span className="text-2xl">🎓</span>
+                <h3 className="font-semibold text-white">Mentors</h3>
+              </div>
+              <p className="text-sm text-neutral-400">Browse available mentors and book a one-on-one session for your team.</p>
+            </div>
+          </NextLink>
+        </div>
+      </div>
+
       <HackathonInfo
         hackathon={hackathon}
         userParticipation={userParticipation}
