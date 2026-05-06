@@ -17,6 +17,7 @@ import AnnouncementManager from "@/components/announcementManager";
 import AnnouncementDisplay from "@/components/announcementDisplay";
 import VolunteerManager from "@/components/volunteerManager";
 import MentorManager from "@/components/mentorManager";
+import SponsorLeads from "@/components/sponsorLeads";
 
 function computeAvgScore(
   scores: { score: number; criterionId?: string | null; judge: { id: string } }[],
@@ -208,6 +209,9 @@ const DashUrl = () => {
 
           {/* Mentor Management Section */}
           <MentorManager hackathonId={hackathon.id} />
+
+          {/* Sponsor Leads Section */}
+          <SponsorLeads />
 
           {/* Stats Section */}
           <div className="flex items-center space-x-6 rounded-lg border border-neutral-800 p-4">

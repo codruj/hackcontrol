@@ -1,19 +1,156 @@
 import { useState } from "react";
 import Image from "next/image";
 import NextLink from "next/link";
+import * as Dialog from "@radix-ui/react-dialog";
+import { toast } from "sonner";
 
 import { api } from "@/trpc/api";
-import HackathonCard from "@/components/hackathonCard";
 import { ExternalLink, Link, Input } from "@/ui";
-import { ArrowRight, Github } from "@/ui/icons";
+import { ArrowRight, Github, Cancel } from "@/ui/icons";
+import { Button, ButtonStyles } from "@/ui/button";
+import { inputStyles } from "@/ui/input";
 import Up from "@/animations/up";
-import { ButtonStyles } from "@/ui/button";
 import clsx from "clsx";
+
+function SponsorInterestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [companyName, setCompanyName] = useState("");
+  const [contact, setContact] = useState("");
+  const [description, setDescription] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const mutation = api.sponsor.submitSponsorInterest.useMutation({
+    onSuccess: () => setSubmitted(true),
+    onError: (e) => toast.error(e.message || "Something went wrong"),
+  });
+
+  const validate = () => {
+    const next: Record<string, string> = {};
+    if (!companyName.trim()) next.companyName = "Company name is required";
+    if (!contact.trim()) next.contact = "Email or phone is required";
+    if (!description.trim()) next.description = "Description is required";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    mutation.mutate({ companyName, contact, description });
+  };
+
+  const handleClose = () => {
+    setCompanyName("");
+    setContact("");
+    setDescription("");
+    setErrors({});
+    setSubmitted(false);
+    onClose();
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-midnight bg-opacity-70 backdrop-blur-sm data-[state=open]:animate-overlayShow" />
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[90vh] w-[90vw] max-w-[480px] translate-x-[-50%] translate-y-[-50%] overflow-auto rounded-lg border border-neutral-800 bg-midnight p-6 shadow-xl focus:outline-none data-[state=open]:animate-contentShow">
+          <div className="mb-5 flex items-center justify-between">
+            <Dialog.Title className="text-xl font-medium">
+              {submitted ? "Request received" : "Register as a sponsor"}
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <button onClick={handleClose} className="text-neutral-400 hover:text-white transition-colors">
+                <Cancel width={22} />
+              </button>
+            </Dialog.Close>
+          </div>
+
+          {submitted ? (
+            <div className="space-y-4">
+              <p className="text-gray-300">
+                Thank you! We've received your interest and will be in touch soon.
+              </p>
+              <div className="flex justify-end">
+                <Button onClick={handleClose}>Close</Button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-300">
+                  Company name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Acme Corp"
+                  maxLength={200}
+                  className={inputStyles}
+                  disabled={mutation.isLoading}
+                />
+                {errors.companyName && (
+                  <p className="mt-1 text-xs text-red-400">{errors.companyName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300">
+                  Email or phone <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={contact}
+                  onChange={(e) => setContact(e.target.value)}
+                  placeholder="contact@acme.com or +40 700 000 000"
+                  maxLength={200}
+                  className={inputStyles}
+                  disabled={mutation.isLoading}
+                />
+                {errors.contact && (
+                  <p className="mt-1 text-xs text-red-400">{errors.contact}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300">
+                  How would you like to sponsor? <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Tell us how you'd like to support UTCN hackathons — prizes, mentorship, workshops, etc."
+                  maxLength={2000}
+                  rows={4}
+                  className={inputStyles}
+                  disabled={mutation.isLoading}
+                />
+                {errors.description && (
+                  <p className="mt-1 text-xs text-red-400">{errors.description}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Button type="button" onClick={handleClose} disabled={mutation.isLoading}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={mutation.isLoading} loadingstatus={mutation.isLoading}>
+                  Submit
+                </Button>
+              </div>
+            </form>
+          )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
 
 export default function Home() {
   const [hackathonSearch, setHackathonSearch] = useState("");
-  const { data: recentHackathons, isLoading } =
-    api.hackathon.getRecentHackathons.useQuery();
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const { data: recentHackathons, isLoading } = api.hackathon.getRecentHackathons.useQuery();
+  const { data: sponsors = [] } = api.sponsor.getPublicSponsors.useQuery();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -48,19 +185,47 @@ export default function Home() {
             </div>
           </Link>
         </div>
-        <div className="mb-6 mt-4 flex flex-col gap-4 md:flex-row md:gap-3">
-          <HackathonCard
-            name="✨ Simple, as it should be"
-            description="Create hackathons in no time, review and decide who wins your event"
-          />
-          <HackathonCard
-            name="🚀 Share and participate"
-            description="Share with friends and power your event with organization"
-          />
+
+        {/* Sponsors & Partners card */}
+        <div className="mb-2 mt-4 w-full max-w-sm">
+          <div className="relative rounded-md bg-white/10">
+            <div className="relative z-[2] m-[1px] flex flex-col rounded-[inherit] bg-midnight p-5">
+              <h3 className="mb-3 text-xl font-medium">🤝 Sponsors &amp; Partners</h3>
+              {sponsors.length > 0 ? (
+                <ul
+                  className="max-h-44 space-y-1.5 overflow-y-auto pr-1"
+                  style={{ scrollbarWidth: "thin" }}
+                >
+                  {sponsors.map((name) => (
+                    <li
+                      key={name}
+                      className="rounded px-2 py-1 text-sm text-gray-300 bg-white/5"
+                    >
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-neutral-500 italic">No sponsors listed yet.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col items-center gap-3">
+            <p className="text-sm text-neutral-400">
+              Interested in sponsoring UTCN hackathons?
+            </p>
+            <button
+              onClick={() => setModalOpen(true)}
+              className={clsx(ButtonStyles, "text-sm")}
+            >
+              Register here
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Hackathons listing — same as in the dashboard */}
+      {/* Hackathons listing */}
       <div className="mx-auto w-full max-w-6xl px-6 pb-16">
         <h1 className="mb-4 text-2xl font-medium">Hackathons</h1>
         {isLoading ? (
@@ -77,7 +242,7 @@ export default function Home() {
                 .filter(
                   (h) =>
                     h.name.toLowerCase().includes(hackathonSearch.toLowerCase()) ||
-                    h.description?.toLowerCase().includes(hackathonSearch.toLowerCase())
+                    h.description?.toLowerCase().includes(hackathonSearch.toLowerCase()),
                 )
                 .sort((a, b) => {
                   if (a.is_finished !== b.is_finished) return a.is_finished ? 1 : -1;
@@ -117,12 +282,12 @@ export default function Home() {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-lg border border-neutral-800 p-8">
-            <p className="text-center text-neutral-300">
-              No hackathons available yet.
-            </p>
+            <p className="text-center text-neutral-300">No hackathons available yet.</p>
           </div>
         )}
       </div>
+
+      <SponsorInterestModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }

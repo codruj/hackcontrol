@@ -11,6 +11,7 @@ import { categoryRouter } from "./routers/category.router";
 import { volunteerRouter } from "./routers/volunteer.router";
 import { mentorRouter } from "./routers/mentor.router";
 import { chatRouter } from "./routers/chat.router";
+import { sponsorRouter } from "./routers/sponsor.router";
 
 export const appRouter = createTRPCRouter({
   hackathon: hackathonRouter,
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
   volunteer: volunteerRouter,
   mentor: mentorRouter,
   chat: chatRouter,
+  sponsor: sponsorRouter,
 });
 
 // export type definition of API

@@ -422,6 +422,16 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
+model SponsorRegistration {
+  id          String   @id @default(cuid())
+  companyName String
+  contact     String
+  description String
+  createdAt   DateTime @default(now())
+
+  @@map("sponsor_registrations")
+}
+
 enum crdb_internal_region {
   aws_eu_central_1 @map("aws-eu-central-1")
 }
