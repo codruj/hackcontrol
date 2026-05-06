@@ -5,12 +5,12 @@ const Check: FC<ComponentProps<"svg">> = (props) => (
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     strokeWidth="1.5"
-    color="#ffff"
+    color="currentColor"
     viewBox="0 0 24 24"
     {...props}
   >
     <path
-      stroke="#fff"
+      stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M5 13l4 4L19 7"

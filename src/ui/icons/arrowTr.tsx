@@ -5,12 +5,12 @@ const ArrowTr: FC<ComponentProps<"svg">> = (props) => (
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     strokeWidth="1.5"
-    color="#fff"
+    color="currentColor"
     viewBox="0 0 24 24"
     {...props}
   >
     <path
-      stroke="#fff"
+      stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M6 19L19 6m0 0v12.48M19 6H6.52"

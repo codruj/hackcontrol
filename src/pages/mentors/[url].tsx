@@ -72,7 +72,7 @@ const MentorsPage = () => {
       <div className="mt-16 flex w-full flex-col justify-between space-y-3 border-b border-neutral-800 px-6 py-4 md:flex-row md:items-center md:space-y-0">
         <div className="flex items-center space-x-4">
           <Link href={`/app/${hackathon.url}`}>
-            <ArrowLeft width={24} className="cursor-pointer transition-all hover:-translate-x-0.5" />
+            <ArrowLeft width={24} className="cursor-pointer text-white transition-all hover:-translate-x-0.5" />
           </Link>
           <h1 className="text-xl font-medium md:text-2xl">{hackathon.name}</h1>
           <span className="rounded-full bg-amber-600 px-2 py-1 text-xs font-medium text-white">MENTORS</span>
