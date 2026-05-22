@@ -1,0 +1,1 @@
+DELETE FROM sponsor_registrations WHERE "companyName" = 'codruta'; /tmp/del.sql
