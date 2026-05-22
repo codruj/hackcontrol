@@ -10,6 +10,7 @@ import Loading from "@/components/loading";
 import MentorManager from "@/components/mentorManager";
 import MentorAvailability from "@/components/mentorAvailability";
 import MentorBooking from "@/components/mentorBooking";
+import AdminMentorSlots from "@/components/adminMentorSlots";
 
 type Tab = "book" | "availability" | "manage";
 
@@ -111,7 +112,10 @@ const MentorsPage = () => {
           <MentorAvailability hackathonId={hackathon.id} />
         )}
         {tab === "manage" && isOrganizer && (
-          <MentorManager hackathonId={hackathon.id} />
+          <>
+            <MentorManager hackathonId={hackathon.id} />
+            <AdminMentorSlots hackathonId={hackathon.id} />
+          </>
         )}
       </div>
     </>

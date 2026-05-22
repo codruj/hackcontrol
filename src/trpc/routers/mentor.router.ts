@@ -113,6 +113,7 @@ export const mentorRouter = createTRPCRouter({
   createSlot: protectedProcedure
     .input(z.object({
       hackathonId: z.string(),
+      mentorUserId: z.string().optional(),
       startTime: z.date(),
       endTime: z.date(),
       topic: z.string().max(200).optional(),
@@ -127,16 +128,21 @@ export const mentorRouter = createTRPCRouter({
       });
       const isOwner = hackathon?.creatorId === userId || role === "ADMIN";
 
-      const mentor = await ctx.prisma.mentor.findUnique({
-        where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } },
-      });
-
-      if (!isOwner && !mentor) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only mentors or organizers can create slots" });
+      let mentor;
+      if (isOwner && input.mentorUserId) {
+        mentor = await ctx.prisma.mentor.findUnique({
+          where: { userId_hackathonId: { userId: input.mentorUserId, hackathonId: input.hackathonId } },
+        });
+        if (!mentor) throw new TRPCError({ code: "NOT_FOUND", message: "Mentor not found for this hackathon" });
+      } else {
+        mentor = await ctx.prisma.mentor.findUnique({
+          where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } },
+        });
+        if (!isOwner && !mentor) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only mentors or organizers can create slots" });
+        }
+        if (!mentor) throw new TRPCError({ code: "BAD_REQUEST", message: "No mentor profile found. Contact the organizer." });
       }
-
-      const mentorId = mentor?.id;
-      if (!mentorId) throw new TRPCError({ code: "BAD_REQUEST", message: "No mentor profile found. Contact the organizer." });
 
       if (input.startTime >= input.endTime) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Start time must be before end time" });
@@ -144,7 +150,7 @@ export const mentorRouter = createTRPCRouter({
 
       return ctx.prisma.mentorSlot.create({
         data: {
-          mentorId,
+          mentorId: mentor.id,
           hackathonId: input.hackathonId,
           startTime: input.startTime,
           endTime: input.endTime,
@@ -173,9 +179,6 @@ export const mentorRouter = createTRPCRouter({
       if (!slot || slot.hackathonId !== input.hackathonId) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Slot not found" });
       }
-      if (slot.isBooked) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot edit a booked slot" });
-      }
 
       const hackathon = await ctx.prisma.hackathon.findUnique({
         where: { id: input.hackathonId },
@@ -186,6 +189,10 @@ export const mentorRouter = createTRPCRouter({
 
       if (!isOwner && !isMentorOwner) {
         throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      if (slot.isBooked && !isOwner) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot edit a booked slot" });
       }
 
       const update: Record<string, unknown> = {};
