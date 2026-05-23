@@ -3,11 +3,21 @@ import { useState } from "react";
 import Loading from "./loading";
 import { Lightbulb } from "@/ui/icons";
 
-const COLLAPSE_THRESHOLD = 200;
+function getPreview(content: string): string {
+  const lines = content.split("\n");
+  if (lines.length > 3) return lines.slice(0, 3).join("\n");
+  if (content.length > 300) return content.slice(0, 300);
+  return content;
+}
+
+function needsExpansion(content: string): boolean {
+  return content.split("\n").length > 3 || content.length > 300;
+}
 
 function AnnouncementItem({ announcement }: { announcement: { id: string; title: string; content: string; important: boolean; createdAt: Date } }) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = announcement.content.length > COLLAPSE_THRESHOLD;
+  const isLong = needsExpansion(announcement.content);
+  const preview = getPreview(announcement.content);
 
   return (
     <div
@@ -25,15 +35,16 @@ function AnnouncementItem({ announcement }: { announcement: { id: string; title:
         )}
         <h3 className="text-lg font-semibold text-white">{announcement.title}</h3>
       </div>
-      <p className={`mt-3 whitespace-pre-wrap text-gray-300 ${!expanded && isLong ? "line-clamp-3" : ""}`}>
-        {announcement.content}
+      <p className="mt-3 whitespace-pre-wrap text-gray-300">
+        {expanded ? announcement.content : preview}
+        {!expanded && isLong ? "…" : ""}
       </p>
       {isLong && (
         <button
           onClick={() => setExpanded((e) => !e)}
-          className="mt-2 text-sm text-neutral-400 hover:text-white transition-colors"
+          className="mt-2 text-sm text-neutral-400 transition-colors hover:text-white"
         >
-          {expanded ? "Show less" : "Show more"}
+          {expanded ? "Show less" : "Read more"}
         </button>
       )}
       <p className="mt-3 text-xs text-gray-500">
