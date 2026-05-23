@@ -14,6 +14,7 @@ import ParticipationCard from "@/components/participationCard";
 import CopyKey from "@/components/copyKey";
 import HackathonInfo from "@/components/hackathonInfo";
 import TeamEditor from "@/components/teamEditor";
+import * as Dialog from "@radix-ui/react-dialog";
 import AnnouncementManager from "@/components/announcementManager";
 import AnnouncementDisplay from "@/components/announcementDisplay";
 import VolunteerManager from "@/components/volunteerManager";
@@ -52,6 +53,7 @@ const DashUrl = () => {
   const { data: session } = useSession();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
 
   // Get public hackathon data first
   const { data: publicData, isLoading: publicLoading } =
@@ -553,6 +555,14 @@ const DashUrl = () => {
                 </button>
               </NextLink>
             )}
+            {isEnrolled && userParticipation && (
+              <button
+                onClick={() => setTeamDialogOpen(true)}
+                className="rounded-md border border-neutral-600 bg-neutral-800/40 px-4 py-2 text-sm font-medium text-neutral-300 transition-all hover:bg-neutral-700/60"
+              >
+                Edit Team
+              </button>
+            )}
             {isVolunteer && (
               <NextLink href={`/volunteers/${hackathon.url}`}>
                 <button className="rounded-md border border-purple-700 bg-purple-900/20 px-4 py-2 text-sm font-medium text-purple-600 transition-all hover:bg-purple-900/40">
@@ -561,6 +571,28 @@ const DashUrl = () => {
               </NextLink>
             )}
           </div>
+        )}
+
+        {userParticipation && (
+          <Dialog.Root open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <Dialog.Title className="text-lg font-semibold">Edit Team</Dialog.Title>
+                  <Dialog.Close className="text-neutral-400 hover:text-white">✕</Dialog.Close>
+                </div>
+                <TeamEditor
+                  participationId={userParticipation.id}
+                  initialTeamName={(userParticipation as any).team_members?.team_name}
+                  initialMembers={(userParticipation as any).team_members?.members}
+                  readOnly={hackathon.is_finished}
+                  defaultEditing={!hackathon.is_finished}
+                  onSaved={() => setTeamDialogOpen(false)}
+                />
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
         )}
       </div>
 
@@ -597,17 +629,6 @@ const DashUrl = () => {
             <p className="mb-1 font-medium text-white">You haven't joined this hackathon yet</p>
             <p className="text-sm text-neutral-400">Register using the hackathon key from your dashboard to access chat, mentors, and more.</p>
           </div>
-        </div>
-      )}
-
-      {userParticipation && (
-        <div className="container mx-auto mt-6 max-w-4xl px-4 sm:px-6">
-          <TeamEditor
-            participationId={userParticipation.id}
-            initialTeamName={(userParticipation as any).team_members?.team_name}
-            initialMembers={(userParticipation as any).team_members?.members}
-            readOnly={hackathon.is_finished}
-          />
         </div>
       )}
 

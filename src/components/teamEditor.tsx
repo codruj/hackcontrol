@@ -9,10 +9,12 @@ interface TeamEditorProps {
   initialTeamName?: string | null;
   initialMembers?: { name: string; email: string; role?: string }[];
   readOnly?: boolean;
+  defaultEditing?: boolean;
+  onSaved?: () => void;
 }
 
-const TeamEditor = ({ participationId, initialTeamName, initialMembers, readOnly }: TeamEditorProps) => {
-  const [editing, setEditing] = useState(false);
+const TeamEditor = ({ participationId, initialTeamName, initialMembers, readOnly, defaultEditing, onSaved }: TeamEditorProps) => {
+  const [editing, setEditing] = useState(defaultEditing ?? false);
   const [teamName, setTeamName] = useState(initialTeamName ?? "");
   const [members, setMembers] = useState<TeamMember[]>(
     initialMembers?.map((m) => ({ name: m.name, email: m.email, role: m.role ?? "" })) ?? [],
@@ -25,6 +27,7 @@ const TeamEditor = ({ participationId, initialTeamName, initialMembers, readOnly
     onSuccess: () => {
       toast.success("Team updated");
       setEditing(false);
+      onSaved?.();
     },
     onError: (err) => toast.error(err.message),
   });
