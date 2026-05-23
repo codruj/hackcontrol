@@ -4,6 +4,7 @@ import {
   updateParticipationSchema,
 } from "@/schema/participation";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "..";
 
 export const participationRouter = createTRPCRouter({
@@ -126,6 +127,57 @@ export const participationRouter = createTRPCRouter({
         data: {
           ...input,
         },
+      });
+    }),
+  //------
+  // Update team members =>
+  updateTeamMembers: protectedProcedure
+    .input(
+      z.object({
+        participationId: z.string(),
+        teamName: z.string().max(100).optional(),
+        members: z
+          .array(
+            z.object({
+              name: z.string().min(1).max(100),
+              email: z.string().max(200),
+              role: z.string().max(100).optional(),
+            }),
+          )
+          .max(20),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const participation = await ctx.prisma.participation.findUnique({
+        where: { id: input.participationId },
+        include: { hackathon: { select: { is_finished: true } } },
+      });
+
+      if (!participation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Participation not found" });
+      }
+
+      if (participation.creatorId !== userId) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      if (participation.hackathon?.is_finished) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot update team after the hackathon has ended",
+        });
+      }
+
+      const teamData =
+        input.members.length > 0
+          ? { team_name: input.teamName ?? null, members: input.members }
+          : null;
+
+      return ctx.prisma.participation.update({
+        where: { id: input.participationId },
+        data: { team_members: teamData as any },
       });
     }),
   //------

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button } from "@/ui";
 import { Send, Trophy, Clock, CheckCircle } from "@/ui/icons";
 import { useRouter } from "next/navigation";
+import { api } from "@/trpc/api";
+import { toast } from "sonner";
 
 interface Judge {
   company?: string | null;
@@ -47,6 +49,7 @@ interface HackathonInfoProps {
     description: string;
     is_reviewed: boolean;
     is_winner: boolean;
+    team_members?: any;
   } | null;
 }
 
@@ -78,6 +81,52 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
   ];
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+
+  type TeamMember = { name: string; email: string; role: string };
+  const existingTeam = userParticipation?.team_members as
+    | { team_name?: string | null; members?: { name: string; email: string; role?: string }[] }
+    | null
+    | undefined;
+  const [teamEditing, setTeamEditing] = useState(false);
+  const [teamName, setTeamName] = useState(existingTeam?.team_name ?? "");
+  const [members, setMembers] = useState<TeamMember[]>(
+    existingTeam?.members?.map((m) => ({ name: m.name, email: m.email, role: m.role ?? "" })) ?? [],
+  );
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("");
+
+  const updateTeamMutation = api.participation.updateTeamMembers.useMutation({
+    onSuccess: () => {
+      toast.success("Team updated");
+      setTeamEditing(false);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  function handleAddMember() {
+    if (!newMemberName.trim()) return;
+    setMembers((prev) => [
+      ...prev,
+      { name: newMemberName.trim(), email: newMemberEmail.trim(), role: newMemberRole.trim() },
+    ]);
+    setNewMemberName("");
+    setNewMemberEmail("");
+    setNewMemberRole("");
+  }
+
+  function handleRemoveMember(index: number) {
+    setMembers((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleSaveTeam() {
+    if (!userParticipation) return;
+    updateTeamMutation.mutate({
+      participationId: userParticipation.id,
+      teamName: teamName || undefined,
+      members,
+    });
+  }
 
   return (
     <div className="container mx-auto mt-8 max-w-4xl px-4 sm:px-6 space-y-6">
@@ -374,6 +423,133 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
                 </span>
               )}
             </div>
+
+            {!hackathon.is_finished && (
+              <div className="mt-4 border-t border-green-800/30 pt-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-300">Team Members</span>
+                  {!teamEditing && (
+                    <button
+                      onClick={() => setTeamEditing(true)}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      {members.length > 0 ? "Edit" : "Add members"}
+                    </button>
+                  )}
+                </div>
+
+                {!teamEditing ? (
+                  members.length > 0 ? (
+                    <div className="space-y-1">
+                      {teamName && (
+                        <p className="mb-2 text-sm text-gray-400">
+                          Team:{" "}
+                          <span className="font-medium text-white">{teamName}</span>
+                        </p>
+                      )}
+                      {members.map((m, i) => (
+                        <div key={i} className="flex flex-wrap items-center gap-2 text-sm text-gray-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-neutral-500" />
+                          <span>{m.name}</span>
+                          {m.email && <span className="text-gray-500">({m.email})</span>}
+                          {m.role && (
+                            <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-400">
+                              {m.role}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No team members added yet.</p>
+                  )
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs text-gray-400">Team name (optional)</label>
+                      <input
+                        type="text"
+                        value={teamName}
+                        onChange={(e) => setTeamName(e.target.value)}
+                        placeholder="Team name"
+                        className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {members.length > 0 && (
+                      <div className="space-y-2">
+                        {members.map((m, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+                          >
+                            <span className="flex-1 text-white">{m.name}</span>
+                            {m.email && <span className="text-gray-500">{m.email}</span>}
+                            {m.role && <span className="text-xs text-neutral-400">{m.role}</span>}
+                            <button
+                              onClick={() => handleRemoveMember(i)}
+                              className="ml-2 text-red-400 hover:text-red-300"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="rounded border border-neutral-700 bg-neutral-900 p-3">
+                      <p className="mb-2 text-xs text-gray-400">Add a member</p>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={newMemberName}
+                          onChange={(e) => setNewMemberName(e.target.value)}
+                          placeholder="Name *"
+                          className="w-full rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={newMemberEmail}
+                          onChange={(e) => setNewMemberEmail(e.target.value)}
+                          placeholder="Email"
+                          className="w-full rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={newMemberRole}
+                          onChange={(e) => setNewMemberRole(e.target.value)}
+                          placeholder="Role (e.g. Frontend, Design)"
+                          className="w-full rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+                        />
+                        <button
+                          onClick={handleAddMember}
+                          disabled={!newMemberName.trim()}
+                          className="rounded bg-neutral-700 px-3 py-1.5 text-sm text-white hover:bg-neutral-600 disabled:opacity-40"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveTeam}
+                        disabled={updateTeamMutation.isLoading}
+                        className="rounded bg-white px-4 py-1.5 text-sm font-medium text-black hover:bg-gray-200 disabled:opacity-50"
+                      >
+                        {updateTeamMutation.isLoading ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        onClick={() => setTeamEditing(false)}
+                        className="rounded border border-neutral-700 px-4 py-1.5 text-sm text-gray-400 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <>
