@@ -555,7 +555,7 @@ const DashUrl = () => {
                 </button>
               </NextLink>
             )}
-            {isEnrolled && userParticipation && (
+            {isEnrolled && (
               <button
                 onClick={() => setTeamDialogOpen(true)}
                 className="rounded-md border border-neutral-600 bg-neutral-800/40 px-4 py-2 text-sm font-medium text-neutral-300 transition-all hover:bg-neutral-700/60"
@@ -573,7 +573,7 @@ const DashUrl = () => {
           </div>
         )}
 
-        {userParticipation && (
+        {isEnrolled && (
           <Dialog.Root open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>
             <Dialog.Portal>
               <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" />
@@ -583,11 +583,10 @@ const DashUrl = () => {
                   <Dialog.Close className="text-neutral-400 hover:text-white">✕</Dialog.Close>
                 </div>
                 <TeamEditor
-                  participationId={userParticipation.id}
-                  initialTeamName={(userParticipation as any).team_members?.team_name}
-                  initialMembers={(userParticipation as any).team_members?.members}
+                  hackathonId={hackathon.id}
+                  initialTeamName={(enrollment as any)?.teamMembers?.team_name}
+                  initialMembers={(enrollment as any)?.teamMembers?.members}
                   readOnly={hackathon.is_finished}
-                  defaultEditing={!hackathon.is_finished}
                   onSaved={() => setTeamDialogOpen(false)}
                 />
               </Dialog.Content>

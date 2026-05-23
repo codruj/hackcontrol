@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import {
   adminProcedure,
   createTRPCRouter,
@@ -958,4 +959,34 @@ export const hackathonRouter = createTRPCRouter({
         where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: input.hackathonId } },
       }),
     ),
+
+  updateEnrollmentTeam: protectedProcedure
+    .input(
+      z.object({
+        hackathonId: z.string(),
+        teamName: z.string().max(100).optional(),
+        members: z.array(
+          z.object({
+            name: z.string().min(1).max(100),
+            email: z.string().max(200),
+            role: z.string().max(100).optional(),
+          }),
+        ).max(20),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const enrollment = await ctx.prisma.hackathonEnrollment.findUnique({
+        where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: input.hackathonId } },
+      });
+      if (!enrollment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Not enrolled in this hackathon" });
+      }
+      const teamData = input.members.length > 0
+        ? { team_name: input.teamName ?? null, members: input.members }
+        : null;
+      return ctx.prisma.hackathonEnrollment.update({
+        where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: input.hackathonId } },
+        data: { teamMembers: teamData } as any,
+      });
+    }),
 });
