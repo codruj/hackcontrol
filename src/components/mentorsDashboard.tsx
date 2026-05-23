@@ -25,7 +25,10 @@ const MentorsDashboard = () => {
                 )}
               </div>
             </div>
-            <div className="ml-4">
+            <div className="ml-4 flex gap-2">
+              <Link href={`/chat/${m.hackathon.url}`}>
+                <Button>Chat</Button>
+              </Link>
               <Link href={`/mentors/${m.hackathon.url}`}>
                 <Button icon={<ArrowRight width={16} />}>Manage Availability</Button>
               </Link>
