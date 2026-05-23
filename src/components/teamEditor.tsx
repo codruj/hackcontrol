@@ -1,144 +1,176 @@
 import { useState } from "react";
 import { api } from "@/trpc/api";
 import { toast } from "sonner";
-
-type TeamMember = { name: string; email: string; role: string };
+import { useSession } from "next-auth/react";
 
 interface TeamEditorProps {
-  participationId: string;
-  initialTeamName?: string | null;
-  initialMembers?: { name: string; email: string; role?: string }[];
-  readOnly?: boolean;
-  onSaved?: () => void;
+  hackathonId: string;
+  onClose?: () => void;
 }
 
-const TeamEditor = ({ participationId, initialTeamName, initialMembers, readOnly, onSaved }: TeamEditorProps) => {
-  const [teamName, setTeamName] = useState(initialTeamName ?? "");
-  const [members, setMembers] = useState<TeamMember[]>(
-    initialMembers?.map((m) => ({ name: m.name, email: m.email, role: m.role ?? "" })) ?? [],
-  );
-  const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState("");
+const TeamEditor = ({ hackathonId, onClose }: TeamEditorProps) => {
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id ?? "";
+  const utils = api.useContext();
 
-  const updateTeam = api.participation.updateTeamMembers.useMutation({
+  const { data: team, isLoading } = api.hackathon.getMyTeam.useQuery({ hackathonId });
+
+  const [editingName, setEditingName] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: searchResults } = api.hackathon.searchUsersForTeam.useQuery(
+    { query: searchQuery },
+    { enabled: searchQuery.length >= 2 },
+  );
+
+  const updateName = api.hackathon.updateTeamName.useMutation({
     onSuccess: () => {
-      toast.success("Team updated");
-      onSaved?.();
+      toast.success("Team name updated");
+      setEditingName(false);
+      utils.hackathon.getMyTeam.invalidate({ hackathonId });
     },
     onError: (err) => toast.error(err.message),
   });
 
-  function addMember() {
-    if (!newName.trim()) return;
-    setMembers((prev) => [...prev, { name: newName.trim(), email: newEmail.trim(), role: newRole.trim() }]);
-    setNewName("");
-    setNewEmail("");
-    setNewRole("");
+  const addMember = api.hackathon.addTeamMember.useMutation({
+    onSuccess: () => {
+      toast.success("Member added");
+      setSearchQuery("");
+      utils.hackathon.getMyTeam.invalidate({ hackathonId });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const removeMember = api.hackathon.removeTeamMember.useMutation({
+    onSuccess: () => {
+      utils.hackathon.getMyTeam.invalidate({ hackathonId });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  if (isLoading) {
+    return <p className="text-sm text-gray-400">Loading...</p>;
   }
 
-  function removeMember(i: number) {
-    setMembers((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
-  function save() {
-    updateTeam.mutate({ participationId, teamName: teamName || undefined, members });
-  }
-
-  if (readOnly) {
+  if (!team) {
     return (
-      <div className="space-y-2">
-        {teamName && (
-          <p className="text-sm text-gray-400">
-            Team: <span className="font-medium text-white">{teamName}</span>
-          </p>
-        )}
-        {members.length > 0 ? (
-          members.map((m, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-2 rounded border border-neutral-800 px-3 py-2 text-sm">
-              <span className="font-medium text-white">{m.name}</span>
-              {m.email && <span className="text-gray-500">{m.email}</span>}
-              {m.role && <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">{m.role}</span>}
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-500">No team members added.</p>
-        )}
-      </div>
+      <p className="text-sm text-gray-400">
+        You are not part of a team in this hackathon yet.
+      </p>
     );
   }
 
+  const isLeader = team.leaderId === currentUserId;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Team name */}
       <div>
-        <label className="mb-1 block text-xs text-gray-400">Team name (optional)</label>
-        <input
-          type="text"
-          value={teamName}
-          onChange={(e) => setTeamName(e.target.value)}
-          placeholder="Team name"
-          className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
-        />
+        {editingName ? (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              type="text"
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newTeamName.trim()) {
+                  updateName.mutate({ teamId: team.id, name: newTeamName.trim() });
+                }
+                if (e.key === "Escape") setEditingName(false);
+              }}
+              className="flex-1 rounded border border-neutral-600 bg-neutral-900 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-neutral-400"
+            />
+            <button
+              onClick={() => newTeamName.trim() && updateName.mutate({ teamId: team.id, name: newTeamName.trim() })}
+              disabled={!newTeamName.trim() || updateName.isLoading}
+              className="rounded bg-white px-3 py-1.5 text-sm font-medium text-black hover:bg-gray-200 disabled:opacity-40"
+            >
+              Save
+            </button>
+            <button onClick={() => setEditingName(false)} className="text-sm text-gray-400 hover:text-white">
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-base font-semibold text-white">{team.name}</span>
+            {isLeader && (
+              <button
+                onClick={() => { setNewTeamName(team.name); setEditingName(true); }}
+                className="text-xs text-blue-400 hover:text-blue-300"
+              >
+                Rename
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {members.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-400">Members</p>
-          {members.map((m, i) => (
-            <div key={i} className="flex items-center gap-3 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm">
-              <span className="flex-1 text-white">{m.name}</span>
-              {m.email && <span className="text-gray-500">{m.email}</span>}
-              {m.role && <span className="text-xs text-neutral-400">{m.role}</span>}
-              <button onClick={() => removeMember(i)} className="text-red-400 hover:text-red-300">×</button>
+      {/* Members list */}
+      <div className="space-y-2">
+        <p className="text-xs text-gray-400">Members ({team.memberships.length})</p>
+        {team.memberships.map((m) => (
+          <div key={m.userId} className="flex items-center gap-3 rounded border border-neutral-800 px-3 py-2">
+            {m.user.image && (
+              <img src={m.user.image} alt="" className="h-7 w-7 rounded-full" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-white">{m.user.name ?? m.user.username ?? m.user.email}</p>
+              {m.user.username && <p className="text-xs text-gray-500">@{m.user.username}</p>}
             </div>
-          ))}
+            {m.userId === team.leaderId && (
+              <span className="text-xs text-amber-500">Leader</span>
+            )}
+            {isLeader && m.userId !== team.leaderId && (
+              <button
+                onClick={() => removeMember.mutate({ teamId: team.id, userId: m.userId })}
+                disabled={removeMember.isLoading}
+                className="text-sm text-red-400 hover:text-red-300 disabled:opacity-40"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add member search */}
+      {isLeader && (
+        <div>
+          <p className="mb-2 text-xs text-gray-400">Add a member</p>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, email or username..."
+            className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
+          />
+          {searchResults && searchResults.length > 0 && (
+            <div className="mt-1 rounded border border-neutral-700 bg-neutral-900">
+              {searchResults
+                .filter((u) => !team.memberships.some((m) => m.userId === u.id))
+                .map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => addMember.mutate({ teamId: team.id, userId: u.id })}
+                    disabled={addMember.isLoading}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-neutral-800 disabled:opacity-50"
+                  >
+                    <div>
+                      <p className="text-white">{u.name ?? u.username}</p>
+                      {u.username && <p className="text-xs text-gray-500">@{u.username}</p>}
+                    </div>
+                  </button>
+                ))}
+            </div>
+          )}
+          {searchQuery.length >= 2 && searchResults?.length === 0 && (
+            <p className="mt-2 text-xs text-gray-500">No users found.</p>
+          )}
         </div>
       )}
-
-      <div className="rounded border border-neutral-700 bg-neutral-900 p-4">
-        <p className="mb-3 text-xs text-gray-400">Add a member</p>
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Name *"
-            className="w-full rounded border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
-          />
-          <input
-            type="text"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            placeholder="Email"
-            className="w-full rounded border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
-          />
-          <input
-            type="text"
-            value={newRole}
-            onChange={(e) => setNewRole(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addMember()}
-            placeholder="Role (e.g. Frontend, Design)"
-            className="w-full rounded border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none"
-          />
-          <button
-            onClick={addMember}
-            disabled={!newName.trim()}
-            className="rounded bg-neutral-700 px-4 py-2 text-sm text-white hover:bg-neutral-600 disabled:opacity-40"
-          >
-            Add
-          </button>
-        </div>
-      </div>
-
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={save}
-          disabled={updateTeam.isLoading}
-          className="rounded bg-white px-5 py-2 text-sm font-medium text-black hover:bg-gray-200 disabled:opacity-50"
-        >
-          {updateTeam.isLoading ? "Saving..." : "Save"}
-        </button>
-      </div>
     </div>
   );
 };

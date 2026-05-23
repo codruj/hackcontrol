@@ -581,19 +581,10 @@ const DashUrl = () => {
                 <Dialog.Title className="text-lg font-semibold">Team</Dialog.Title>
                 <Dialog.Close className="text-neutral-400 hover:text-white">✕</Dialog.Close>
               </div>
-              {userParticipation ? (
-                <TeamEditor
-                  participationId={userParticipation.id}
-                  initialTeamName={(userParticipation as any).team_members?.team_name}
-                  initialMembers={(userParticipation as any).team_members?.members}
-                  readOnly={hackathon.is_finished}
-                  onSaved={() => setTeamDialogOpen(false)}
-                />
-              ) : (
-                <p className="text-sm text-gray-400">
-                  You need to submit a project before adding team members.
-                </p>
-              )}
+              <TeamEditor
+                hackathonId={hackathon.id}
+                onClose={() => setTeamDialogOpen(false)}
+              />
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>

@@ -958,4 +958,62 @@ export const hackathonRouter = createTRPCRouter({
         where: { userId_hackathonId: { userId: ctx.session.user.id, hackathonId: input.hackathonId } },
       }),
     ),
+
+  getMyTeam: protectedProcedure
+    .input(z.object({ hackathonId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const membership = await ctx.prisma.teamMembership.findFirst({
+        where: { userId: ctx.session.user.id, team: { hackathonId: input.hackathonId } },
+        include: {
+          team: {
+            include: {
+              memberships: {
+                include: { user: { select: { id: true, name: true, username: true, email: true, image: true } } },
+              },
+            },
+          },
+        },
+      });
+      return membership?.team ?? null;
+    }),
+
+  updateTeamName: protectedProcedure
+    .input(z.object({ teamId: z.string(), name: z.string().min(1).max(60) }))
+    .mutation(async ({ ctx, input }) => {
+      const team = await ctx.prisma.team.findUnique({ where: { id: input.teamId } });
+      if (!team || team.leaderId !== ctx.session.user.id) throw new Error("Not authorized");
+      await ctx.prisma.team.update({ where: { id: input.teamId }, data: { name: input.name } });
+      await ctx.prisma.chatChannel.updateMany({ where: { teamId: input.teamId }, data: { name: input.name } });
+      return { ok: true };
+    }),
+
+  addTeamMember: protectedProcedure
+    .input(z.object({ teamId: z.string(), userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const team = await ctx.prisma.team.findUnique({ where: { id: input.teamId } });
+      if (!team || team.leaderId !== ctx.session.user.id) throw new Error("Not authorized");
+      await ctx.prisma.hackathonEnrollment.upsert({
+        where: { userId_hackathonId: { userId: input.userId, hackathonId: team.hackathonId } },
+        create: { userId: input.userId, hackathonId: team.hackathonId },
+        update: {},
+      });
+      await ctx.prisma.teamMembership.upsert({
+        where: { teamId_userId: { teamId: input.teamId, userId: input.userId } },
+        create: { teamId: input.teamId, userId: input.userId },
+        update: {},
+      });
+      return { ok: true };
+    }),
+
+  removeTeamMember: protectedProcedure
+    .input(z.object({ teamId: z.string(), userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const team = await ctx.prisma.team.findUnique({ where: { id: input.teamId } });
+      if (!team || team.leaderId !== ctx.session.user.id) throw new Error("Not authorized");
+      if (input.userId === team.leaderId) throw new Error("Cannot remove the team leader");
+      await ctx.prisma.teamMembership.delete({
+        where: { teamId_userId: { teamId: input.teamId, userId: input.userId } },
+      });
+      return { ok: true };
+    }),
 });
