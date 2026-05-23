@@ -600,12 +600,13 @@ const DashUrl = () => {
         </div>
       )}
 
-      {userParticipation && !hackathon.is_finished && (
+      {userParticipation && (
         <div className="container mx-auto mt-6 max-w-4xl px-4 sm:px-6">
           <TeamEditor
             participationId={userParticipation.id}
             initialTeamName={(userParticipation as any).team_members?.team_name}
             initialMembers={(userParticipation as any).team_members?.members}
+            readOnly={hackathon.is_finished}
           />
         </div>
       )}

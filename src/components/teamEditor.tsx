@@ -8,9 +8,10 @@ interface TeamEditorProps {
   participationId: string;
   initialTeamName?: string | null;
   initialMembers?: { name: string; email: string; role?: string }[];
+  readOnly?: boolean;
 }
 
-const TeamEditor = ({ participationId, initialTeamName, initialMembers }: TeamEditorProps) => {
+const TeamEditor = ({ participationId, initialTeamName, initialMembers, readOnly }: TeamEditorProps) => {
   const [editing, setEditing] = useState(false);
   const [teamName, setTeamName] = useState(initialTeamName ?? "");
   const [members, setMembers] = useState<TeamMember[]>(
@@ -53,12 +54,14 @@ const TeamEditor = ({ participationId, initialTeamName, initialMembers }: TeamEd
       <div className="rounded-lg border border-neutral-800 p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Team Members</h3>
-          <button
-            onClick={() => setEditing(true)}
-            className="text-sm text-blue-400 hover:text-blue-300"
-          >
-            {members.length > 0 ? "Edit" : "Add members"}
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              {members.length > 0 ? "Edit" : "Add members"}
+            </button>
+          )}
         </div>
 
         {members.length > 0 ? (
