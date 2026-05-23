@@ -2,7 +2,7 @@ import { api } from "@/trpc/api";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/ui";
-import { Plus, Cancel, SaveFloppyDisk, Settings, ArrowDown } from "@/ui/icons";
+import { Plus, Cancel, SaveFloppyDisk, Settings, ArrowDown, Clock } from "@/ui/icons";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 
@@ -144,6 +144,139 @@ function AdminSlotForm({
   );
 }
 
+interface AdminGenerateFormValues {
+  date: string;
+  startTime: string;
+  endTime: string;
+  slotDurationMinutes: string;
+  topic: string;
+}
+
+function AdminGenerateSlotsForm({
+  hackathonId,
+  mentorUserId,
+  onSuccess,
+  onCancel,
+}: {
+  hackathonId: string;
+  mentorUserId: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const { register, handleSubmit, watch } = useForm<AdminGenerateFormValues>({
+    defaultValues: { date: "", startTime: "", endTime: "", slotDurationMinutes: "30", topic: "" },
+  });
+
+  const generateMutation = api.mentor.generateSlots.useMutation({
+    onSuccess: (result) => {
+      if (result.created === 0) {
+        toast.error("No slots were created — all times overlapped with existing slots.");
+      } else if (result.skipped > 0) {
+        toast.success(`Created ${result.created} slot${result.created !== 1 ? "s" : ""}, skipped ${result.skipped} due to conflicts.`);
+      } else {
+        toast.success(`Created ${result.created} slot${result.created !== 1 ? "s" : ""}.`);
+      }
+      onSuccess();
+    },
+    onError: (e) => toast.error(e.message || "Failed to generate slots"),
+  });
+
+  const watchedStart = watch("startTime");
+  const watchedEnd = watch("endTime");
+  const watchedDuration = watch("slotDurationMinutes");
+
+  const preview = (() => {
+    if (!watchedStart || !watchedEnd || !watchedDuration) return null;
+    const [sh, sm] = watchedStart.split(":").map(Number);
+    const [eh, em] = watchedEnd.split(":").map(Number);
+    const startMins = (sh ?? 0) * 60 + (sm ?? 0);
+    const endMins = (eh ?? 0) * 60 + (em ?? 0);
+    const duration = parseInt(watchedDuration, 10);
+    if (isNaN(startMins) || isNaN(endMins) || isNaN(duration) || duration <= 0 || endMins <= startMins) return null;
+    const count = Math.floor((endMins - startMins) / duration);
+    const leftover = (endMins - startMins) % duration;
+    return { count, leftover };
+  })();
+
+  const onSubmit = (data: AdminGenerateFormValues) => {
+    const duration = parseInt(data.slotDurationMinutes, 10);
+    generateMutation.mutate({
+      hackathonId,
+      mentorUserId,
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      slotDurationMinutes: duration,
+      topic: data.topic || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <label className="mb-1 block text-sm font-medium text-neutral-300">Date *</label>
+        <input
+          type="date"
+          {...register("date", { required: true })}
+          className="focus:ring-primary-500 block w-full rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white focus:border-transparent focus:rounded focus:outline outline-neutral-600 outline-1"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-300">Start time *</label>
+          <input
+            type="time"
+            {...register("startTime", { required: true })}
+            className="focus:ring-primary-500 block w-full rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white focus:border-transparent focus:rounded focus:outline outline-neutral-600 outline-1"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-neutral-300">End time *</label>
+          <input
+            type="time"
+            {...register("endTime", { required: true })}
+            className="focus:ring-primary-500 block w-full rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white focus:border-transparent focus:rounded focus:outline outline-neutral-600 outline-1"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium text-neutral-300">Slot duration *</label>
+        <select
+          {...register("slotDurationMinutes", { required: true })}
+          className="focus:ring-primary-500 block w-full rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white focus:border-transparent focus:rounded focus:outline outline-neutral-600 outline-1"
+        >
+          <option value="15">15 minutes</option>
+          <option value="20">20 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">60 minutes</option>
+        </select>
+        {preview !== null && (
+          <p className="mt-1.5 text-xs text-neutral-500">
+            Will generate {preview.count} slot{preview.count !== 1 ? "s" : ""}
+            {preview.leftover > 0 ? `, ${preview.leftover} min of unused time at the end` : ""}
+          </p>
+        )}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium text-neutral-300">Topic (optional)</label>
+        <input
+          type="text"
+          {...register("topic")}
+          placeholder="e.g. Technical review, Business model feedback..."
+          className="focus:ring-primary-500 block w-full rounded-lg border border-neutral-800 bg-midnight px-3 py-2 text-white placeholder-neutral-400 focus:border-transparent focus:rounded focus:outline outline-neutral-600 outline-1"
+        />
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" onClick={onCancel} disabled={generateMutation.isLoading}>Cancel</Button>
+        <Button type="submit" icon={<Clock width={16} />} loadingstatus={generateMutation.isLoading} disabled={generateMutation.isLoading}>
+          Generate slots
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 interface AdminMentorSlotsProps {
   hackathonId: string;
 }
@@ -151,6 +284,7 @@ interface AdminMentorSlotsProps {
 const AdminMentorSlots = ({ hackathonId }: AdminMentorSlotsProps) => {
   const [expandedMentors, setExpandedMentors] = useState<Set<string>>(new Set());
   const [addingForMentor, setAddingForMentor] = useState<string | null>(null);
+  const [generatingForMentor, setGeneratingForMentor] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<AdminSlot | null>(null);
 
   const { data: mentors, isLoading: mentorsLoading } = api.mentor.getHackathonMentors.useQuery({ hackathonId });
@@ -335,15 +469,42 @@ const AdminMentorSlots = ({ hackathonId }: AdminMentorSlotsProps) => {
                       })}
                     </div>
                   )}
-                  <Button icon={<Plus width={16} />} onClick={() => setAddingForMentor(m.userId)}>
-                    Add slot for {m.user.name}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button icon={<Clock width={16} />} onClick={() => setGeneratingForMentor(m.userId)}>
+                      Generate slots
+                    </Button>
+                    <Button icon={<Plus width={16} />} onClick={() => setAddingForMentor(m.userId)}>
+                      Add slot for {m.user.name}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      <Dialog.Root open={!!generatingForMentor} onOpenChange={(o) => !o && setGeneratingForMentor(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[90vw] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-lg border border-neutral-800 bg-midnight p-6 shadow-2xl focus:outline-none">
+            <div className="mb-5 flex items-center justify-between">
+              <Dialog.Title className="text-xl font-medium">Generate Availability Slots</Dialog.Title>
+              <Dialog.Close asChild>
+                <Cancel width={22} className="cursor-pointer text-gray-400 transition-all hover:scale-105" />
+              </Dialog.Close>
+            </div>
+            {generatingForMentor && (
+              <AdminGenerateSlotsForm
+                hackathonId={hackathonId}
+                mentorUserId={generatingForMentor}
+                onSuccess={() => { setGeneratingForMentor(null); refetch(); }}
+                onCancel={() => setGeneratingForMentor(null)}
+              />
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <Dialog.Root open={!!addingForMentor} onOpenChange={(o) => !o && setAddingForMentor(null)}>
         <Dialog.Portal>

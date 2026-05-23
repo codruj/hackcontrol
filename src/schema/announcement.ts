@@ -16,7 +16,7 @@ export type Announcement = z.TypeOf<typeof announcementSchema>;
 // Create new announcement
 export const newAnnouncementSchema = z.object({
   title: z.string().min(1).max(100),
-  content: z.string().min(1).max(2000),
+  content: z.string().min(1),
   important: z.boolean().optional().default(false),
   hackathonId: z.string(),
 });
@@ -27,7 +27,7 @@ export type NewAnnouncement = z.TypeOf<typeof newAnnouncementSchema>;
 export const updateAnnouncementSchema = z.object({
   id: z.string(),
   title: z.string().min(1).max(100).optional(),
-  content: z.string().min(1).max(2000).optional(),
+  content: z.string().min(1).optional(),
   important: z.boolean().optional(),
 });
 

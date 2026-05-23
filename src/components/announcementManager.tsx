@@ -231,16 +231,12 @@ const CreateAnnouncementModal = ({
           <textarea
             id="content"
             className={inputStyles}
-            placeholder="Announcement content (max 2000 characters)"
+            placeholder="Announcement content"
             rows={6}
             autoComplete="off"
             disabled={loading}
             {...register("content", {
               required: "Content is required",
-              maxLength: {
-                value: 2000,
-                message: "Content must be less than 2000 characters",
-              },
             })}
           />
           {errors.content && <Alert>{errors.content?.message}</Alert>}
@@ -331,10 +327,6 @@ const EditAnnouncementForm = ({
           disabled={loading}
           {...register("content", {
             required: "Content is required",
-            maxLength: {
-              value: 2000,
-              message: "Content must be less than 2000 characters",
-            },
           })}
         />
         {errors.content && <Alert>{errors.content?.message}</Alert>}

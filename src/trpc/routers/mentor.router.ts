@@ -375,4 +375,97 @@ export const mentorRouter = createTRPCRouter({
         data: { isBooked: false, bookedById: null, bookedByTeamId: null, bookingTeamName: null, bookingPurpose: null, bookingNote: null },
       });
     }),
+
+  generateSlots: protectedProcedure
+    .input(z.object({
+      hackathonId: z.string(),
+      mentorUserId: z.string().optional(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      startTime: z.string().regex(/^\d{2}:\d{2}$/),
+      endTime: z.string().regex(/^\d{2}:\d{2}$/),
+      slotDurationMinutes: z.number().int().min(5).max(480),
+      topic: z.string().max(200).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const role = ctx.session.user.role;
+
+      const hackathon = await ctx.prisma.hackathon.findUnique({
+        where: { id: input.hackathonId },
+        select: { creatorId: true },
+      });
+      const isOwner = hackathon?.creatorId === userId || role === "ADMIN";
+
+      let mentor;
+      if (isOwner && input.mentorUserId) {
+        mentor = await ctx.prisma.mentor.findUnique({
+          where: { userId_hackathonId: { userId: input.mentorUserId, hackathonId: input.hackathonId } },
+        });
+        if (!mentor) throw new TRPCError({ code: "NOT_FOUND", message: "Mentor not found for this hackathon" });
+      } else {
+        mentor = await ctx.prisma.mentor.findUnique({
+          where: { userId_hackathonId: { userId, hackathonId: input.hackathonId } },
+        });
+        if (!isOwner && !mentor) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only mentors or organizers can generate slots" });
+        }
+        if (!mentor) throw new TRPCError({ code: "BAD_REQUEST", message: "No mentor profile found. Contact the organizer." });
+      }
+
+      const intervalStart = new Date(`${input.date}T${input.startTime}:00`);
+      const intervalEnd = new Date(`${input.date}T${input.endTime}:00`);
+
+      if (isNaN(intervalStart.getTime()) || isNaN(intervalEnd.getTime())) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid date or time" });
+      }
+      if (intervalStart >= intervalEnd) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Start time must be before end time" });
+      }
+
+      const durationMs = input.slotDurationMinutes * 60 * 1000;
+      const candidates: Array<{ startTime: Date; endTime: Date }> = [];
+      let cursor = intervalStart.getTime();
+      while (cursor + durationMs <= intervalEnd.getTime()) {
+        candidates.push({ startTime: new Date(cursor), endTime: new Date(cursor + durationMs) });
+        cursor += durationMs;
+      }
+
+      if (candidates.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "The interval is shorter than the selected slot duration" });
+      }
+
+      const dayStart = new Date(`${input.date}T00:00:00`);
+      const dayEnd = new Date(`${input.date}T23:59:59`);
+      const existing = await ctx.prisma.mentorSlot.findMany({
+        where: { mentorId: mentor.id, startTime: { gte: dayStart, lte: dayEnd } },
+        select: { startTime: true, endTime: true },
+      });
+
+      const toCreate: Array<{ startTime: Date; endTime: Date }> = [];
+      let skipped = 0;
+      for (const c of candidates) {
+        const overlaps = existing.some(
+          (ex) => c.startTime < new Date(ex.endTime) && c.endTime > new Date(ex.startTime),
+        );
+        if (overlaps) {
+          skipped++;
+        } else {
+          toCreate.push(c);
+        }
+      }
+
+      if (toCreate.length > 0) {
+        await ctx.prisma.mentorSlot.createMany({
+          data: toCreate.map((s) => ({
+            mentorId: mentor!.id,
+            hackathonId: input.hackathonId,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            topic: input.topic ?? null,
+          })),
+        });
+      }
+
+      return { created: toCreate.length, skipped, total: candidates.length };
+    }),
 });
