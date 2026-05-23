@@ -13,6 +13,7 @@ import Prepare from "@/components/prepare";
 import ParticipationCard from "@/components/participationCard";
 import CopyKey from "@/components/copyKey";
 import HackathonInfo from "@/components/hackathonInfo";
+import TeamEditor from "@/components/teamEditor";
 import AnnouncementManager from "@/components/announcementManager";
 import AnnouncementDisplay from "@/components/announcementDisplay";
 import VolunteerManager from "@/components/volunteerManager";
@@ -596,6 +597,16 @@ const DashUrl = () => {
             <p className="mb-1 font-medium text-white">You haven't joined this hackathon yet</p>
             <p className="text-sm text-neutral-400">Register using the hackathon key from your dashboard to access chat, mentors, and more.</p>
           </div>
+        </div>
+      )}
+
+      {userParticipation && !hackathon.is_finished && (
+        <div className="container mx-auto mt-6 max-w-4xl px-4 sm:px-6">
+          <TeamEditor
+            participationId={userParticipation.id}
+            initialTeamName={(userParticipation as any).team_members?.team_name}
+            initialMembers={(userParticipation as any).team_members?.members}
+          />
         </div>
       )}
 
