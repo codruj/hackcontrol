@@ -88,11 +88,13 @@ const JudgesDashboard = () => {
     return null; // Don't show anything if user is not a judge
   }
 
+  const unique = Array.from(new Map(judgedHackathons.map((a) => [a.hackathon.id, a])).values());
+
   return (
     <div className="rounded-lg border border-neutral-800 p-6">
       <h2 className="mb-4 text-lg font-semibold">Judge Assignments</h2>
       <div className="space-y-3">
-        {judgedHackathons.map((assignment) => (
+        {unique.map((assignment) => (
           <JudgeAssignmentCard key={assignment.id} assignment={assignment} />
         ))}
       </div>

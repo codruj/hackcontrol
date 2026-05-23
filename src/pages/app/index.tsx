@@ -22,11 +22,13 @@ import NextLink from "next/link";
 function EnrolledHackathons() {
   const { data, isLoading } = api.hackathon.getMyEnrollments.useQuery();
   if (isLoading || !data || data.length === 0) return null;
+  const enrollments = data as Array<{ id: string; hackathon: { id: string; name: string; url: string; description: string | null; is_finished: boolean; updatedAt: Date } }>;
+  const unique = Array.from(new Map(enrollments.map((e) => [e.hackathon.id, e])).values());
   return (
     <div className="mb-6 border-b border-neutral-800 pb-6">
       <h1 className="mb-4 text-2xl font-medium">My Hackathons</h1>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {(data as Array<{ id: string; hackathon: { id: string; name: string; url: string; description: string | null; is_finished: boolean; updatedAt: Date } }>).map((e) => (
+        {unique.map((e) => (
           <NextLink key={e.id} href={`/app/${e.hackathon.url}`} className="block">
             <div className="group h-full cursor-pointer rounded-md bg-white bg-opacity-10 p-4 transition-all hover:bg-opacity-20">
               <div className="flex items-center justify-between">
