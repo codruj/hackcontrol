@@ -23,6 +23,7 @@ interface Slot {
   bookingPurpose: string | null;
   bookingNote: string | null;
   bookedBy: { id: string; name: string | null; email: string | null } | null;
+  mentor: { user: { id: string } };
 }
 
 function SlotForm({
@@ -258,9 +259,10 @@ function GenerateSlotsForm({
 
 interface MentorAvailabilityProps {
   hackathonId: string;
+  currentUserId: string;
 }
 
-const MentorAvailability = ({ hackathonId }: MentorAvailabilityProps) => {
+const MentorAvailability = ({ hackathonId, currentUserId }: MentorAvailabilityProps) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
@@ -277,7 +279,7 @@ const MentorAvailability = ({ hackathonId }: MentorAvailabilityProps) => {
     onError: (e) => toast.error(e.message || "Failed to cancel booking"),
   });
 
-  const mySlots = (allSlots as Slot[] | undefined)?.filter((s) => true) ?? [];
+  const mySlots = (allSlots as Slot[] | undefined)?.filter((s) => s.mentor.user.id === currentUserId) ?? [];
 
   return (
     <div>

@@ -116,7 +116,7 @@ const MentorsPage = () => {
           <MentorBooking hackathonId={hackathon.id} currentUserId={userId} isOrganizer={isOrganizer} />
         )}
         {tab === "availability" && isMentor && (
-          <MentorAvailability hackathonId={hackathon.id} />
+          <MentorAvailability hackathonId={hackathon.id} currentUserId={userId} />
         )}
         {tab === "manage" && isOrganizer && (
           <>
