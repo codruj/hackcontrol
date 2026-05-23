@@ -307,17 +307,25 @@ export const mentorRouter = createTRPCRouter({
       });
       const teamId = teamMembership?.teamId ?? null;
 
-      const updatedSlot = await ctx.prisma.mentorSlot.update({
-        where: { id: input.slotId },
+      // Atomic conditional update — only succeeds if the slot is still unbooked,
+      // preventing double bookings from concurrent requests
+      const claimed = await ctx.prisma.mentorSlot.updateMany({
+        where: { id: input.slotId, isBooked: false },
         data: {
           isBooked: true,
           bookedById: userId,
           bookedByTeamId: teamId,
-          bookingTeamName: teamMembership?.team.name ?? input.bookingTeamName,
-          bookingPurpose: input.bookingPurpose,
-          bookingNote: input.bookingNote,
+          bookingTeamName: teamMembership?.team.name ?? input.bookingTeamName ?? null,
+          bookingPurpose: input.bookingPurpose ?? null,
+          bookingNote: input.bookingNote ?? null,
         },
       });
+
+      if (claimed.count === 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "This slot was just booked by someone else" });
+      }
+
+      const updatedSlot = await ctx.prisma.mentorSlot.findUnique({ where: { id: input.slotId } });
 
       // Create a TEAM_MENTOR channel if the user is on a team
       if (teamId) {
