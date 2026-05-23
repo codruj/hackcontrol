@@ -1,6 +1,54 @@
 import { api } from "@/trpc/api";
+import { useState } from "react";
 import Loading from "./loading";
 import { Lightbulb } from "@/ui/icons";
+
+const COLLAPSE_THRESHOLD = 200;
+
+function AnnouncementItem({ announcement }: { announcement: { id: string; title: string; content: string; important: boolean; createdAt: Date } }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = announcement.content.length > COLLAPSE_THRESHOLD;
+
+  return (
+    <div
+      className={`rounded-lg border p-4 transition-all ${
+        announcement.important
+          ? "border-yellow-600/50 bg-yellow-900/10 shadow-lg shadow-yellow-900/20"
+          : "border-neutral-800/50 bg-neutral-900/30"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        {announcement.important && (
+          <span className="rounded-full bg-yellow-600 px-2 py-0.5 text-xs font-bold text-white">
+            IMPORTANT
+          </span>
+        )}
+        <h3 className="text-lg font-semibold text-white">{announcement.title}</h3>
+      </div>
+      <p className={`mt-3 whitespace-pre-wrap text-gray-300 ${!expanded && isLong ? "line-clamp-3" : ""}`}>
+        {announcement.content}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-2 text-sm text-neutral-400 hover:text-white transition-colors"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+      <p className="mt-3 text-xs text-gray-500">
+        Posted on {new Date(announcement.createdAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })} at {new Date(announcement.createdAt).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
+    </div>
+  );
+}
 
 interface AnnouncementDisplayProps {
   hackathonUrl: string;
@@ -20,7 +68,7 @@ const AnnouncementDisplay = ({ hackathonUrl }: AnnouncementDisplayProps) => {
   }
 
   if (!announcements || announcements.length === 0) {
-    return null; // Don't show anything if no announcements
+    return null;
   }
 
   return (
@@ -33,42 +81,7 @@ const AnnouncementDisplay = ({ hackathonUrl }: AnnouncementDisplayProps) => {
 
         <div className="space-y-4">
           {announcements.map((announcement) => (
-            <div
-              key={announcement.id}
-              className={`rounded-lg border p-4 transition-all ${
-                announcement.important
-                  ? "border-yellow-600/50 bg-yellow-900/10 shadow-lg shadow-yellow-900/20"
-                  : "border-neutral-800/50 bg-neutral-900/30"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    {announcement.important && (
-                      <span className="rounded-full bg-yellow-600 px-2 py-0.5 text-xs font-bold text-white">
-                        IMPORTANT
-                      </span>
-                    )}
-                    <h3 className="text-lg font-semibold text-white">
-                      {announcement.title}
-                    </h3>
-                  </div>
-                  <p className="mt-3 whitespace-pre-wrap text-gray-300">
-                    {announcement.content}
-                  </p>
-                  <p className="mt-3 text-xs text-gray-500">
-                    Posted on {new Date(announcement.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })} at {new Date(announcement.createdAt).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <AnnouncementItem key={announcement.id} announcement={announcement} />
           ))}
         </div>
 
