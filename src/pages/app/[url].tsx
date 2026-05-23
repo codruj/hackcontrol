@@ -573,26 +573,30 @@ const DashUrl = () => {
           </div>
         )}
 
-        {isEnrolled && (
-          <Dialog.Root open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>
-            <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" />
-              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
-                <div className="mb-4 flex items-center justify-between">
-                  <Dialog.Title className="text-lg font-semibold">Edit Team</Dialog.Title>
-                  <Dialog.Close className="text-neutral-400 hover:text-white">✕</Dialog.Close>
-                </div>
+        <Dialog.Root open={teamDialogOpen} onOpenChange={setTeamDialogOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <Dialog.Title className="text-lg font-semibold">Team</Dialog.Title>
+                <Dialog.Close className="text-neutral-400 hover:text-white">✕</Dialog.Close>
+              </div>
+              {userParticipation ? (
                 <TeamEditor
-                  hackathonId={hackathon.id}
-                  initialTeamName={(enrollment as any)?.teamMembers?.team_name}
-                  initialMembers={(enrollment as any)?.teamMembers?.members}
+                  participationId={userParticipation.id}
+                  initialTeamName={(userParticipation as any).team_members?.team_name}
+                  initialMembers={(userParticipation as any).team_members?.members}
                   readOnly={hackathon.is_finished}
                   onSaved={() => setTeamDialogOpen(false)}
                 />
-              </Dialog.Content>
-            </Dialog.Portal>
-          </Dialog.Root>
-        )}
+              ) : (
+                <p className="text-sm text-gray-400">
+                  You need to submit a project before adding team members.
+                </p>
+              )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </div>
 
       <AnnouncementDisplay hackathonUrl={hackathon.url} />

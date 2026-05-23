@@ -5,14 +5,14 @@ import { toast } from "sonner";
 type TeamMember = { name: string; email: string; role: string };
 
 interface TeamEditorProps {
-  hackathonId: string;
+  participationId: string;
   initialTeamName?: string | null;
   initialMembers?: { name: string; email: string; role?: string }[];
   readOnly?: boolean;
   onSaved?: () => void;
 }
 
-const TeamEditor = ({ hackathonId, initialTeamName, initialMembers, readOnly, onSaved }: TeamEditorProps) => {
+const TeamEditor = ({ participationId, initialTeamName, initialMembers, readOnly, onSaved }: TeamEditorProps) => {
   const [teamName, setTeamName] = useState(initialTeamName ?? "");
   const [members, setMembers] = useState<TeamMember[]>(
     initialMembers?.map((m) => ({ name: m.name, email: m.email, role: m.role ?? "" })) ?? [],
@@ -21,7 +21,7 @@ const TeamEditor = ({ hackathonId, initialTeamName, initialMembers, readOnly, on
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState("");
 
-  const updateTeam = api.hackathon.updateEnrollmentTeam.useMutation({
+  const updateTeam = api.participation.updateTeamMembers.useMutation({
     onSuccess: () => {
       toast.success("Team updated");
       onSaved?.();
@@ -42,7 +42,7 @@ const TeamEditor = ({ hackathonId, initialTeamName, initialMembers, readOnly, on
   }
 
   function save() {
-    updateTeam.mutate({ hackathonId, teamName: teamName || undefined, members });
+    updateTeam.mutate({ participationId, teamName: teamName || undefined, members });
   }
 
   if (readOnly) {
