@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button } from "@/ui";
 import { Send, Trophy, Clock, CheckCircle } from "@/ui/icons";
 import { useRouter } from "next/navigation";
+import { api } from "@/trpc/api";
+import { toast } from "sonner";
 
 interface Judge {
   company?: string | null;
@@ -78,6 +80,17 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
   ];
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const utils = api.useContext();
+  const deleteMutation = api.participation.deleteSubmission.useMutation({
+    onSuccess: () => {
+      toast.success("Submission deleted");
+      setConfirmDelete(false);
+      utils.hackathon.getHackathonPublic.invalidate({ url: hackathon.url });
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   return (
     <div className="container mx-auto mt-8 max-w-4xl px-4 sm:px-6 space-y-6">
@@ -338,15 +351,12 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
         {userParticipation ? (
           <div className="rounded-lg border border-green-800/30 bg-green-900/10 p-5">
             <div className="mb-3 flex items-start justify-between">
-              <div>
+              <div className="flex-1 min-w-0">
                 <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-green-400">
                   <CheckCircle width={20} />
-                  You have submitted a project
+                  Your submission
                 </h3>
-                <p className="mb-2 text-white">
-                  <span className="text-sm text-gray-400">Project: </span>
-                  <span className="font-medium">{userParticipation.title}</span>
-                </p>
+                <p className="mb-1 text-white font-medium">{userParticipation.title}</p>
                 {userParticipation.description && (
                   <p className="mb-3 line-clamp-2 text-sm text-gray-400">
                     {userParticipation.description}
@@ -354,13 +364,14 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
                 )}
               </div>
               {userParticipation.is_winner && (
-                <div className="flex items-center gap-1 rounded-full bg-yellow-600 px-3 py-1">
+                <div className="ml-3 flex items-center gap-1 rounded-full bg-yellow-600 px-3 py-1 shrink-0">
                   <Trophy width={16} />
                   <span className="text-sm font-bold text-white">WINNER</span>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 mb-4">
               <span className="text-sm text-gray-400">Review Status:</span>
               {userParticipation.is_reviewed ? (
                 <span className="flex items-center gap-1 text-sm font-medium text-green-400">
@@ -374,6 +385,51 @@ const HackathonInfo = ({ hackathon, userParticipation }: HackathonInfoProps) => 
                 </span>
               )}
             </div>
+
+            {!hackathon.is_finished ? (
+              <div className="border-t border-green-800/30 pt-4 space-y-3">
+                <button
+                  onClick={() => router.push(`/send/${hackathon.url}`)}
+                  className="rounded border border-neutral-600 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 transition-colors"
+                >
+                  Edit submission
+                </button>
+
+                {!confirmDelete ? (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="ml-2 rounded border border-red-800/50 px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 transition-colors"
+                  >
+                    Delete submission
+                  </button>
+                ) : (
+                  <div className="rounded border border-red-700 bg-red-950/30 p-3">
+                    <p className="mb-3 text-sm text-white">
+                      Are you sure? This cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => deleteMutation.mutate({ id: userParticipation.id })}
+                        disabled={deleteMutation.isLoading}
+                        className="rounded bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                      >
+                        {deleteMutation.isLoading ? "Deleting..." : "Yes, delete"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="rounded border border-neutral-700 px-3 py-1.5 text-sm text-gray-400 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="border-t border-green-800/30 pt-4 text-xs text-gray-500">
+                Submissions can no longer be edited because the hackathon has ended.
+              </p>
+            )}
           </div>
         ) : (
           <>

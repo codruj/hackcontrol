@@ -181,4 +181,86 @@ export const participationRouter = createTRPCRouter({
       });
     }),
   //------
+  // Edit own submission =>
+  editSubmission: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z.string().min(1).max(50),
+        description: z.string().min(1).max(300),
+        project_url: z.string().url(),
+        presentation_url: z.string().url().optional().or(z.literal("")),
+        team_members: z
+          .object({
+            team_name: z.string().optional(),
+            members: z.array(
+              z.object({
+                name: z.string().min(1),
+                email: z.string().email(),
+                role: z.string().optional(),
+              }),
+            ),
+          })
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const participation = await ctx.prisma.participation.findUnique({
+        where: { id: input.id },
+        include: { hackathon: { select: { is_finished: true } } },
+      });
+
+      if (!participation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Submission not found" });
+      }
+
+      if (participation.creatorId !== userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You can only edit your own submission" });
+      }
+
+      if (participation.hackathon?.is_finished) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Submissions cannot be edited after the hackathon has ended" });
+      }
+
+      return ctx.prisma.participation.update({
+        where: { id: input.id },
+        data: {
+          title: input.title,
+          description: input.description,
+          project_url: input.project_url,
+          presentation_url: input.presentation_url || null,
+          team_members: (input.team_members ?? null) as any,
+        },
+      });
+    }),
+  //------
+  // Delete own submission =>
+  deleteSubmission: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const participation = await ctx.prisma.participation.findUnique({
+        where: { id: input.id },
+        include: { hackathon: { select: { is_finished: true } } },
+      });
+
+      if (!participation) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Submission not found" });
+      }
+
+      if (participation.creatorId !== userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You can only delete your own submission" });
+      }
+
+      if (participation.hackathon?.is_finished) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Submissions cannot be deleted after the hackathon has ended" });
+      }
+
+      await ctx.prisma.participation.delete({ where: { id: input.id } });
+      return { ok: true };
+    }),
+  //------
 });
