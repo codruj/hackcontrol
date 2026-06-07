@@ -23,6 +23,8 @@ services:
       - GITHUB_SECRET=${GITHUB_SECRET}
     env_file:
       - .env
+    volumes:
+      - ./uploads:/app/uploads
     networks:
       - app-network
 

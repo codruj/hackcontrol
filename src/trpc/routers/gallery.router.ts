@@ -71,9 +71,10 @@ export const galleryRouter = createTRPCRouter({
       if (!photo) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Photo not found" });
       }
-      if (photo.url.startsWith("/uploads/")) {
+      if (photo.url.startsWith("/api/uploads/")) {
         try {
-          await unlink(join(process.cwd(), "public", photo.url));
+          const rel = photo.url.replace(/^\/api\/uploads\//, "uploads/");
+          await unlink(join(process.cwd(), rel));
         } catch {
           // file already gone — ignore
         }

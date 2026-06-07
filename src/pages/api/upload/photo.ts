@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const ext = EXT_MAP[mimeType] ?? "jpg";
   const fileName = `${hackathonId}-${nanoid(10)}.${ext}`;
-  const uploadDir = join(process.cwd(), "public", "uploads", "gallery");
+  const uploadDir = join(process.cwd(), "uploads", "gallery");
 
   try {
     await mkdir(uploadDir, { recursive: true });
@@ -73,5 +73,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: "Failed to save file" });
   }
 
-  return res.status(200).json({ url: `/uploads/gallery/${fileName}` });
+  return res.status(200).json({ url: `/api/uploads/gallery/${fileName}` });
 }
