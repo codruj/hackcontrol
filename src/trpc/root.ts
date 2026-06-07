@@ -14,6 +14,7 @@ import { chatRouter } from "./routers/chat.router";
 import { sponsorRouter } from "./routers/sponsor.router";
 import { galleryRouter } from "./routers/gallery.router";
 import { notificationRouter } from "./routers/notification.router";
+import { pressRouter } from "./routers/press.router";
 
 export const appRouter = createTRPCRouter({
   hackathon: hackathonRouter,
@@ -29,6 +30,7 @@ export const appRouter = createTRPCRouter({
   sponsor: sponsorRouter,
   gallery: galleryRouter,
   notification: notificationRouter,
+  press: pressRouter,
 });
 
 // export type definition of API

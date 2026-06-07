@@ -9,7 +9,7 @@ import { ArrowLeft, Cancel, Trophy } from "@/ui/icons";
 import { ButtonStyles } from "@/ui/button";
 import clsx from "clsx";
 
-type TabId = "overview" | "timeline" | "rules" | "prizes" | "people" | "sponsors" | "gallery";
+type TabId = "overview" | "timeline" | "rules" | "prizes" | "people" | "sponsors" | "gallery" | "press";
 
 type Sponsor = { name: string; logo?: string; website?: string };
 
@@ -43,6 +43,11 @@ export default function PublicHackathonPage() {
 
   const { data: photos = [] } = api.gallery.getHackathonPhotos.useQuery(
     { hackathonId: data?.hackathon?.id ?? "" },
+    { enabled: !!data?.hackathon?.id }
+  );
+
+  const { data: pressArticles = [] } = api.press.getApprovedPublic.useQuery(
+    { hackathonId: data?.hackathon?.id ?? "", limit: 20 },
     { enabled: !!data?.hackathon?.id }
   );
 
@@ -93,6 +98,7 @@ export default function PublicHackathonPage() {
       : []),
     ...(sponsors.length > 0 ? [{ id: "sponsors" as TabId, label: "Sponsors" }] : []),
     ...(photos.length > 0 ? [{ id: "gallery" as TabId, label: "Gallery" }] : []),
+    ...(pressArticles.length > 0 ? [{ id: "press" as TabId, label: "Press" }] : []),
   ];
 
   return (
@@ -383,6 +389,35 @@ export default function PublicHackathonPage() {
                       className="h-40 w-full object-cover transition-opacity group-hover:opacity-75"
                     />
                   </div>
+                ))}
+              </div>
+            )}
+            {/* Press */}
+            {activeTab === "press" && (
+              <div className="space-y-3">
+                {pressArticles.map((article) => (
+                  <a
+                    key={article.id}
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg border border-neutral-800 p-4 transition-colors hover:border-neutral-700 hover:bg-neutral-800/30"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-medium text-white line-clamp-2 leading-snug">
+                        {article.title}
+                      </p>
+                    </div>
+                    {article.snippet && (
+                      <p className="mt-1.5 text-xs text-neutral-400 line-clamp-2">{article.snippet}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-500">
+                      {article.source && <span>{article.source}</span>}
+                      {article.publishedAt && (
+                        <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </a>
                 ))}
               </div>
             )}

@@ -20,6 +20,7 @@ import AnnouncementDisplay from "@/components/announcementDisplay";
 import VolunteerManager from "@/components/volunteerManager";
 import MentorManager from "@/components/mentorManager";
 import SponsorLeads from "@/components/sponsorLeads";
+import PressDiscovery from "@/components/pressDiscovery";
 
 function computeAvgScore(
   scores: { score: number; criterionId?: string | null; judge: { id: string } }[],
@@ -215,6 +216,9 @@ const DashUrl = () => {
 
           {/* Sponsor Leads Section */}
           <SponsorLeads />
+
+          {/* Press & Mentions */}
+          <PressDiscovery />
 
           {/* Stats Section */}
           <div className="flex items-center space-x-6 rounded-lg border border-neutral-800 p-4">

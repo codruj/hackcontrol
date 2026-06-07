@@ -49,6 +49,7 @@ model Hackathon {
   teams               Team[]
   photos              HackathonPhoto[]
   notifications       Notification[]
+  pressArticles       PressArticle[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -423,6 +424,29 @@ model ChatMessage {
   user      User        @relation(fields: [userId], references: [id])
 
   @@map("chat_messages")
+}
+
+enum PressArticleStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PressArticle {
+  id              String            @id @default(cuid())
+  title           String
+  url             String            @unique
+  source          String?
+  snippet         String?
+  publishedAt     DateTime?
+  hackathonId     String?
+  matchedKeywords Json?
+  relevanceScore  Float             @default(0)
+  status          PressArticleStatus @default(PENDING)
+  discoveredAt    DateTime          @default(now())
+  hackathon       Hackathon?        @relation(fields: [hackathonId], references: [id], onDelete: SetNull)
+
+  @@map("press_articles")
 }
 
 enum NotificationType {

@@ -152,6 +152,7 @@ export default function Home() {
   const { data: recentHackathons, isLoading } = api.hackathon.getRecentHackathons.useQuery();
   const { data: sponsors = [] } = api.sponsor.getPublicSponsors.useQuery();
   const { data: allPhotos = [] } = api.gallery.getAllPhotos.useQuery();
+  const { data: pressPreview = [] } = api.press.getApprovedPublic.useQuery({ limit: 4 });
 
   const previewPhotos = allPhotos.slice(0, 4);
 
@@ -225,6 +226,37 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Press preview */}
+      {pressPreview.length > 0 && (
+        <div className="mx-auto mb-8 w-full max-w-sm px-4">
+          <h3 className="mb-3 text-xl font-medium">In the press</h3>
+          <div className="space-y-2">
+            {pressPreview.map((article) => (
+              <a
+                key={article.id}
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-md border border-neutral-800 p-3 transition-colors hover:border-neutral-700 hover:bg-neutral-800/20"
+              >
+                <p className="text-sm font-medium text-white line-clamp-1">{article.title}</p>
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-neutral-500">
+                  {article.source && <span>{article.source}</span>}
+                  {article.publishedAt && (
+                    <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+                  )}
+                </div>
+              </a>
+            ))}
+          </div>
+          <div className="mt-3 flex justify-center">
+            <NextLink href="/press" className={clsx(ButtonStyles, "text-sm")}>
+              See all press mentions
+            </NextLink>
+          </div>
+        </div>
+      )}
 
       {/* Gallery preview */}
       {previewPhotos.length > 0 && (
