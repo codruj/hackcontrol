@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
+import { NextSeo } from "next-seo";
 import { useSession } from "next-auth/react";
 import { api } from "@/trpc/api";
 import Up from "@/animations/up";
@@ -101,7 +102,21 @@ export default function PublicHackathonPage() {
     ...(pressArticles.length > 0 ? [{ id: "press" as TabId, label: "Press" }] : []),
   ];
 
+  const pageDescription = hackathon.description
+    ? hackathon.description.slice(0, 160)
+    : `${hackathon.name} — a UTCN hackathon managed on HackControl.`;
+
   return (
+    <>
+      <NextSeo
+        title={hackathon.name}
+        description={pageDescription}
+        openGraph={{
+          title: `${hackathon.name} | HackControl`,
+          description: pageDescription,
+          url: `https://hackathons.utcluj.ro/hackathon/${hackathon.url}`,
+        }}
+      />
     <div className="flex min-h-screen flex-col items-center pb-8 pt-16 sm:pt-20 md:pt-24">
       <div className="w-full max-w-4xl px-4">
         <Link href={backHref} className="mb-6 inline-flex items-center space-x-2 text-gray-400 hover:text-white">
@@ -562,5 +577,6 @@ export default function PublicHackathonPage() {
         </Dialog.Portal>
       </Dialog.Root>
     </div>
+    </>
   );
 }

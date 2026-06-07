@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Allow: /hackathon/
+Allow: /gallery
+Allow: /press
+
+Disallow: /app/
+Disallow: /auth/
+Disallow: /chat/
+Disallow: /send/
+Disallow: /volunteers/
+Disallow: /mentors/
+Disallow: /api/
+
+Sitemap: https://hackathons.utcluj.ro/sitemap.xml

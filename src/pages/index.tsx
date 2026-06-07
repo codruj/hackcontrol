@@ -1,7 +1,7 @@
 import { useState } from "react";
-import Image from "next/image";
 import NextLink from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
+import { NextSeo } from "next-seo";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/api";
@@ -157,199 +157,240 @@ export default function Home() {
   const previewPhotos = allPhotos.slice(0, 4);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Hero */}
-      <div className="flex flex-col items-center justify-center space-y-5 px-4 py-14 sm:py-20">
-        <Up>
-          <Image
-            className="relative z-20"
-            src="/images/phck_logo.svg"
-            width={64}
-            height={64}
-            alt="Phck logo"
-          />
-        </Up>
-        <h1 className="text-center text-2xl sm:text-left md:mt-4 md:text-3xl">
-          An open source hackathon management
-        </h1>
-        <div className="flex items-center space-x-2">
-          <ExternalLink
-            href="https://github.com/airi-utcn/hackcontrol"
-            className={ButtonStyles}
-          >
-            <div className="flex items-center space-x-2">
-              <Github width={16} />
-              <span>Repository</span>
-            </div>
-          </ExternalLink>
-          <Link href="auth" underline={false} className={clsx(ButtonStyles)}>
-            <div className="flex items-center space-x-2">
-              <span>Get Started</span>
-              <ArrowRight width={16} />
-            </div>
-          </Link>
-        </div>
+    <>
+      <NextSeo
+        title="HackControl – UTCN Hackathon Platform"
+        titleTemplate="%s"
+        description="HackControl brings UTCN hackathons together: from teams and mentors to judging, submissions, sponsors, and event stories."
+        canonical="https://hackathons.utcluj.ro"
+        openGraph={{
+          url: "https://hackathons.utcluj.ro",
+          title: "HackControl – UTCN Hackathon Platform",
+          description:
+            "HackControl brings UTCN hackathons together: from teams and mentors to judging, submissions, sponsors, and event stories.",
+        }}
+      />
 
-        {/* Sponsors & Partners card */}
-        <div className="mb-2 mt-4 w-full max-w-sm">
-          <div className="rounded-md border border-neutral-800 bg-midnight p-5">
-            <h3 className="mb-3 text-xl font-medium">🤝 Sponsors &amp; Partners</h3>
-            {sponsors.length > 0 ? (
-              <ul
-                className="max-h-44 space-y-1.5 overflow-y-auto pr-1"
-                style={{ scrollbarWidth: "thin" }}
-              >
-                {sponsors.map((name) => (
-                  <li
-                    key={name}
-                    className="rounded border border-neutral-800 px-2 py-1 text-sm text-neutral-300"
-                  >
-                    {name}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-neutral-500 italic">No sponsors listed yet.</p>
-            )}
-          </div>
-
-          <div className="mt-5 flex flex-col items-center gap-3">
-            <p className="text-sm text-neutral-400">
-              Interested in sponsoring UTCN hackathons?
-            </p>
-            <button
-              onClick={() => setModalOpen(true)}
-              className={clsx(ButtonStyles, "text-sm")}
+      <div className="min-h-screen flex flex-col">
+        {/* Hero */}
+        <div className="flex flex-col items-center justify-center space-y-5 px-4 py-10 sm:py-14">
+          <Up>
+            <h1 className="max-w-2xl text-center text-xl leading-snug sm:text-2xl md:text-3xl">
+              HackControl brings UTCN hackathons together: from teams and mentors to judging,
+              submissions, sponsors, and event stories.
+            </h1>
+          </Up>
+          <div className="flex items-center space-x-2">
+            <ExternalLink
+              href="https://github.com/airi-utcn/hackcontrol"
+              className={ButtonStyles}
             >
-              Register here
-            </button>
+              <div className="flex items-center space-x-2">
+                <Github width={16} />
+                <span>Repository</span>
+              </div>
+            </ExternalLink>
+            <Link href="auth" underline={false} className={clsx(ButtonStyles)}>
+              <div className="flex items-center space-x-2">
+                <span>Get Started</span>
+                <ArrowRight width={16} />
+              </div>
+            </Link>
+          </div>
+
+          {/* Sponsors & Partners card */}
+          <div className="mb-2 mt-4 w-full max-w-sm">
+            <div className="rounded-md border border-neutral-800 bg-midnight p-5">
+              <h3 className="mb-3 text-xl font-medium">🤝 Sponsors &amp; Partners</h3>
+              {sponsors.length > 0 ? (
+                <ul
+                  className="max-h-44 space-y-1.5 overflow-y-auto pr-1"
+                  style={{ scrollbarWidth: "thin" }}
+                >
+                  {sponsors.map((name) => (
+                    <li
+                      key={name}
+                      className="rounded border border-neutral-800 px-2 py-1 text-sm text-neutral-300"
+                    >
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-neutral-500 italic">No sponsors listed yet.</p>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-col items-center gap-3">
+              <p className="text-sm text-neutral-400">
+                Interested in sponsoring UTCN hackathons?
+              </p>
+              <button
+                onClick={() => setModalOpen(true)}
+                className={clsx(ButtonStyles, "text-sm")}
+              >
+                Register here
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Press preview */}
-      {pressPreview.length > 0 && (
-        <div className="mx-auto mb-8 w-full max-w-sm px-4">
-          <h3 className="mb-3 text-xl font-medium">In the press</h3>
-          <div className="space-y-2">
-            {pressPreview.map((article) => (
+        {/* About */}
+        <div className="mx-auto mb-10 w-full max-w-2xl px-6">
+          <div className="rounded-lg border border-neutral-800 p-6 sm:p-8">
+            <h2 className="mb-3 text-lg font-semibold">About HackControl</h2>
+            <p className="text-sm leading-relaxed text-neutral-300">
+              HackControl is a hackathon management platform developed for UTCN events, designed
+              to support the full event lifecycle: public presentation, participant registration,
+              team management, mentoring, volunteer coordination, judging, submissions, sponsor
+              visibility, announcements, communication, and event galleries. It has been built
+              and used in real hackathon contexts organised by{" "}
               <a
-                key={article.id}
-                href={article.url}
+                href="https://www.linkedin.com/company/artificial-intelligence-research-institute-airi-utcn/posts/?feedView=all"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-md border border-neutral-800 p-3 transition-colors hover:border-neutral-700 hover:bg-neutral-800/20"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
               >
-                <p className="text-sm font-medium text-white line-clamp-1">{article.title}</p>
-                <div className="mt-0.5 flex items-center gap-2 text-xs text-neutral-500">
-                  {article.source && <span>{article.source}</span>}
-                  {article.publishedAt && (
-                    <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
-                  )}
-                </div>
+                AIRI UTCN
+              </a>{" "}
+              at the{" "}
+              <a
+                href="https://www.linkedin.com/school/universitatea-tehnica-din-cluj-napoca/posts/?feedView=all"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Technical University of Cluj-Napoca
               </a>
-            ))}
-          </div>
-          <div className="mt-3 flex justify-center">
-            <NextLink href="/press" className={clsx(ButtonStyles, "text-sm")}>
-              See all press mentions
-            </NextLink>
+              .
+            </p>
           </div>
         </div>
-      )}
 
-      {/* Gallery preview */}
-      {previewPhotos.length > 0 && (
-        <div className="mx-auto mb-8 w-full max-w-sm px-4">
-          <h3 className="mb-3 text-xl font-medium">Photos</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {previewPhotos.map((photo) => (
-              <div
-                key={photo.id}
-                className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900"
-              >
-                <img
-                  src={photo.url}
-                  alt={photo.hackathon.name}
-                  className="h-28 w-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 flex justify-center">
-            <NextLink
-              href="/gallery"
-              className={clsx(ButtonStyles, "text-sm")}
-            >
-              View gallery
-            </NextLink>
-          </div>
-        </div>
-      )}
-
-      {/* Hackathons listing */}
-      <div className="mx-auto w-full max-w-6xl px-6 pb-16">
-        <h1 className="mb-4 text-2xl font-medium">Hackathons</h1>
-        {isLoading ? (
-          <p className="text-gray-400">Loading hackathons...</p>
-        ) : recentHackathons && recentHackathons.length > 0 ? (
-          <>
-            <Input
-              value={hackathonSearch}
-              placeholder="Search hackathons..."
-              onChange={(e) => setHackathonSearch(e.target.value)}
-            />
-            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {recentHackathons
-                .filter(
-                  (h) =>
-                    h.name.toLowerCase().includes(hackathonSearch.toLowerCase()) ||
-                    h.description?.toLowerCase().includes(hackathonSearch.toLowerCase()),
-                )
-                .sort((a, b) => {
-                  if (a.is_finished !== b.is_finished) return a.is_finished ? 1 : -1;
-                  return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-                })
-                .map((hackathon) => (
-                  <NextLink
-                    key={hackathon.id}
-                    href={`/hackathon/${hackathon.url}`}
-                    className="block"
-                  >
-                    <div className="group relative h-full w-full cursor-pointer rounded-md bg-white bg-opacity-10 p-4 transition-all hover:bg-opacity-20">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium">{hackathon.name}</h3>
-                        {hackathon.is_finished ? (
-                          <span className="rounded bg-neutral-600 px-2 py-0.5 text-xs">
-                            Finished
-                          </span>
-                        ) : (
-                          <span className="rounded bg-green-600 px-2 py-0.5 text-xs">
-                            Ongoing
-                          </span>
-                        )}
-                      </div>
-                      {hackathon.description && (
-                        <p className="mt-2 line-clamp-2 text-sm text-gray-400">
-                          {hackathon.description}
-                        </p>
-                      )}
-                      <p className="mt-2 text-xs text-gray-500">
-                        {new Date(hackathon.updatedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </NextLink>
-                ))}
+        {/* Press preview */}
+        {pressPreview.length > 0 && (
+          <div className="mx-auto mb-8 w-full max-w-sm px-4">
+            <h3 className="mb-3 text-xl font-medium">In the press</h3>
+            <div className="space-y-2">
+              {pressPreview.map((article) => (
+                <a
+                  key={article.id}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-md border border-neutral-800 p-3 transition-colors hover:border-neutral-700 hover:bg-neutral-800/20"
+                >
+                  <p className="text-sm font-medium text-white line-clamp-1">{article.title}</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-neutral-500">
+                    {article.source && <span>{article.source}</span>}
+                    {article.publishedAt && (
+                      <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                </a>
+              ))}
             </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-neutral-800 p-8">
-            <p className="text-center text-neutral-300">No hackathons available yet.</p>
+            <div className="mt-3 flex justify-center">
+              <NextLink href="/press" className={clsx(ButtonStyles, "text-sm")}>
+                See all press mentions
+              </NextLink>
+            </div>
           </div>
         )}
-      </div>
 
-      <SponsorInterestModal open={modalOpen} onClose={() => setModalOpen(false)} />
-    </div>
+        {/* Gallery preview */}
+        {previewPhotos.length > 0 && (
+          <div className="mx-auto mb-8 w-full max-w-sm px-4">
+            <h3 className="mb-3 text-xl font-medium">Photos</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {previewPhotos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900"
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.hackathon.name}
+                    className="h-28 w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex justify-center">
+              <NextLink
+                href="/gallery"
+                className={clsx(ButtonStyles, "text-sm")}
+              >
+                View gallery
+              </NextLink>
+            </div>
+          </div>
+        )}
+
+        {/* Hackathons listing */}
+        <div className="mx-auto w-full max-w-6xl px-6 pb-16">
+          <h2 className="mb-4 text-2xl font-medium">Hackathons</h2>
+          {isLoading ? (
+            <p className="text-gray-400">Loading hackathons...</p>
+          ) : recentHackathons && recentHackathons.length > 0 ? (
+            <>
+              <Input
+                value={hackathonSearch}
+                placeholder="Search hackathons..."
+                onChange={(e) => setHackathonSearch(e.target.value)}
+              />
+              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {recentHackathons
+                  .filter(
+                    (h) =>
+                      h.name.toLowerCase().includes(hackathonSearch.toLowerCase()) ||
+                      h.description?.toLowerCase().includes(hackathonSearch.toLowerCase()),
+                  )
+                  .sort((a, b) => {
+                    if (a.is_finished !== b.is_finished) return a.is_finished ? 1 : -1;
+                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                  })
+                  .map((hackathon) => (
+                    <NextLink
+                      key={hackathon.id}
+                      href={`/hackathon/${hackathon.url}`}
+                      className="block"
+                    >
+                      <div className="group relative h-full w-full cursor-pointer rounded-md bg-white bg-opacity-10 p-4 transition-all hover:bg-opacity-20">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-medium">{hackathon.name}</h3>
+                          {hackathon.is_finished ? (
+                            <span className="rounded bg-neutral-600 px-2 py-0.5 text-xs">
+                              Finished
+                            </span>
+                          ) : (
+                            <span className="rounded bg-green-600 px-2 py-0.5 text-xs">
+                              Ongoing
+                            </span>
+                          )}
+                        </div>
+                        {hackathon.description && (
+                          <p className="mt-2 line-clamp-2 text-sm text-gray-400">
+                            {hackathon.description}
+                          </p>
+                        )}
+                        <p className="mt-2 text-xs text-gray-500">
+                          {new Date(hackathon.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </NextLink>
+                  ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-neutral-800 p-8">
+              <p className="text-center text-neutral-300">No hackathons available yet.</p>
+            </div>
+          )}
+        </div>
+
+        <SponsorInterestModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      </div>
+    </>
   );
 }
