@@ -1,7 +1,24 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure, hackathonManagerProcedure } from "..";
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, publicProcedure, organizerProcedure } from "..";
 import { unlink } from "fs/promises";
 import { join } from "path";
+
+async function assertCanManage(
+  prisma: { hackathon: { findUnique: (args: any) => Promise<{ creatorId: string } | null> } },
+  hackathonId: string,
+  userId: string,
+  role: string,
+) {
+  if (role === "ADMIN") return;
+  const hackathon = await prisma.hackathon.findUnique({
+    where: { id: hackathonId },
+    select: { creatorId: true },
+  });
+  if (!hackathon || hackathon.creatorId !== userId) {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+}
 
 export const galleryRouter = createTRPCRouter({
   getHackathonPhotos: publicProcedure
@@ -22,9 +39,15 @@ export const galleryRouter = createTRPCRouter({
     });
   }),
 
-  addPhoto: hackathonManagerProcedure
-    .input(z.object({ hackathonId: z.string(), url: z.string() }))
+  addPhoto: organizerProcedure
+    .input(z.object({ hackathonId: z.string().min(1), url: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      await assertCanManage(
+        ctx.prisma,
+        input.hackathonId,
+        ctx.session.user.id,
+        ctx.session.user.role,
+      );
       return ctx.prisma.hackathonPhoto.create({
         data: {
           hackathonId: input.hackathonId,
@@ -33,14 +56,20 @@ export const galleryRouter = createTRPCRouter({
       });
     }),
 
-  deletePhoto: hackathonManagerProcedure
-    .input(z.object({ hackathonId: z.string(), photoId: z.string() }))
+  deletePhoto: organizerProcedure
+    .input(z.object({ hackathonId: z.string().min(1), photoId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      await assertCanManage(
+        ctx.prisma,
+        input.hackathonId,
+        ctx.session.user.id,
+        ctx.session.user.role,
+      );
       const photo = await ctx.prisma.hackathonPhoto.findFirst({
         where: { id: input.photoId, hackathonId: input.hackathonId },
       });
       if (!photo) {
-        throw new Error("Photo not found");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Photo not found" });
       }
       if (photo.url.startsWith("/uploads/")) {
         try {
