@@ -48,6 +48,7 @@ model Hackathon {
   enrollments         HackathonEnrollment[]
   teams               Team[]
   photos              HackathonPhoto[]
+  notifications       Notification[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -176,6 +177,7 @@ model User {
   chatMessages         ChatMessage[]
   ledTeams             Team[]          @relation("TeamLeader")
   teamMemberships      TeamMembership[]
+  notifications        Notification[]
 
   @@map("users")
 }
@@ -421,6 +423,29 @@ model ChatMessage {
   user      User        @relation(fields: [userId], references: [id])
 
   @@map("chat_messages")
+}
+
+enum NotificationType {
+  CHAT
+  ANNOUNCEMENT
+  TASK
+  SYSTEM
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  message     String
+  hackathonId String?
+  link        String?
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hackathon   Hackathon?       @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
 model HackathonPhoto {

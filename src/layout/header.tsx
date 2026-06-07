@@ -8,6 +8,7 @@ import Up from "@/animations/up";
 import { Button, Link } from "@/ui";
 import { Cancel } from "@/ui/icons";
 import { toast } from "sonner";
+import NotificationBell from "@/components/notificationBell";
 
 const ThemeToggle = () => {
   const { resolvedTheme, setTheme } = useTheme();
@@ -122,6 +123,7 @@ const Header = () => {
           <InstitutionLogos />
           <HelpModal />
           <ThemeToggle />
+          <NotificationBell />
           {session && (
             <>
               <Up>

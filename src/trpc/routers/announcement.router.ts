@@ -6,6 +6,46 @@ import {
   protectedProcedure,
 } from "..";
 
+async function createAnnouncementNotifications(
+  prisma: any,
+  hackathon: { id: string; name: string; url: string; creatorId: string },
+  title: string,
+  content: string,
+  creatorUserId: string,
+): Promise<void> {
+  const [enrollments, judges, mentors, volunteers] = await Promise.all([
+    prisma.hackathonEnrollment.findMany({ where: { hackathonId: hackathon.id }, select: { userId: true } }),
+    prisma.judge.findMany({ where: { hackathonId: hackathon.id }, select: { userId: true } }),
+    prisma.mentor.findMany({ where: { hackathonId: hackathon.id }, select: { userId: true } }),
+    prisma.volunteer.findMany({ where: { hackathonId: hackathon.id }, select: { userId: true } }),
+  ]);
+
+  const allIds = new Set<string>([
+    ...enrollments.map((e: any) => e.userId),
+    ...judges.map((j: any) => j.userId),
+    ...mentors.map((m: any) => m.userId),
+    ...volunteers.map((v: any) => v.userId),
+  ]);
+  allIds.delete(creatorUserId);
+
+  const targets = [...allIds];
+  if (targets.length === 0) return;
+
+  const preview = content.length > 80 ? content.slice(0, 80) + "…" : content;
+
+  await prisma.notification.createMany({
+    data: targets.map((userId: string) => ({
+      userId,
+      type: "ANNOUNCEMENT",
+      title,
+      message: preview,
+      hackathonId: hackathon.id,
+      link: `/app/${hackathon.url}`,
+      read: false,
+    })),
+  });
+}
+
 // Schemas:
 import {
   newAnnouncementSchema,
@@ -62,12 +102,12 @@ export const announcementRouter = createTRPCRouter({
   create: adminProcedure
     .input(newAnnouncementSchema)
     .mutation(async ({ ctx, input }) => {
-      // Verify the user owns this hackathon
       const hackathon = await ctx.prisma.hackathon.findFirst({
         where: {
           id: input.hackathonId,
           creatorId: ctx.session.user.id,
         },
+        select: { id: true, name: true, url: true, creatorId: true },
       });
 
       if (!hackathon) {
@@ -84,6 +124,14 @@ export const announcementRouter = createTRPCRouter({
           hackathonId: input.hackathonId,
         },
       });
+
+      createAnnouncementNotifications(
+        ctx.prisma,
+        hackathon,
+        announcement.title,
+        announcement.content,
+        ctx.session.user.id,
+      ).catch(() => {});
 
       return announcement;
     }),
