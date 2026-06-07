@@ -151,6 +151,9 @@ export default function Home() {
 
   const { data: recentHackathons, isLoading } = api.hackathon.getRecentHackathons.useQuery();
   const { data: sponsors = [] } = api.sponsor.getPublicSponsors.useQuery();
+  const { data: allPhotos = [] } = api.gallery.getAllPhotos.useQuery();
+
+  const previewPhotos = allPhotos.slice(0, 4);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -222,6 +225,35 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Gallery preview */}
+      {previewPhotos.length > 0 && (
+        <div className="mx-auto mb-8 w-full max-w-sm px-4">
+          <h3 className="mb-3 text-xl font-medium">Photos</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {previewPhotos.map((photo) => (
+              <div
+                key={photo.id}
+                className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900"
+              >
+                <img
+                  src={photo.url}
+                  alt={photo.hackathon.name}
+                  className="h-28 w-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex justify-center">
+            <NextLink
+              href="/gallery"
+              className={clsx(ButtonStyles, "text-sm")}
+            >
+              View gallery
+            </NextLink>
+          </div>
+        </div>
+      )}
 
       {/* Hackathons listing */}
       <div className="mx-auto w-full max-w-6xl px-6 pb-16">

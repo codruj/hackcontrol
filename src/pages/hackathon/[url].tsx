@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useSession } from "next-auth/react";
 import { api } from "@/trpc/api";
 import Up from "@/animations/up";
-import { ArrowLeft, Trophy } from "@/ui/icons";
+import { ArrowLeft, Cancel, Trophy } from "@/ui/icons";
 import { ButtonStyles } from "@/ui/button";
 import clsx from "clsx";
 
-type TabId = "overview" | "timeline" | "rules" | "prizes" | "people" | "sponsors";
+type TabId = "overview" | "timeline" | "rules" | "prizes" | "people" | "sponsors" | "gallery";
 
 type Sponsor = { name: string; logo?: string; website?: string };
 
@@ -30,6 +31,7 @@ export default function PublicHackathonPage() {
   const router = useRouter();
   const { url } = router.query;
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const { data: session } = useSession();
   const backHref = session ? "/app" : "/";
   const backLabel = session ? "Back to Dashboard" : "Back";
@@ -37,6 +39,11 @@ export default function PublicHackathonPage() {
   const { data, isLoading, error } = api.hackathon.getHackathonWithWinners.useQuery(
     { url: url as string },
     { enabled: !!url }
+  );
+
+  const { data: photos = [] } = api.gallery.getHackathonPhotos.useQuery(
+    { hackathonId: data?.hackathon?.id ?? "" },
+    { enabled: !!data?.hackathon?.id }
   );
 
   if (isLoading) {
@@ -85,6 +92,7 @@ export default function PublicHackathonPage() {
       ? [{ id: "people" as TabId, label: "People" }]
       : []),
     ...(sponsors.length > 0 ? [{ id: "sponsors" as TabId, label: "Sponsors" }] : []),
+    ...(photos.length > 0 ? [{ id: "gallery" as TabId, label: "Gallery" }] : []),
   ];
 
   return (
@@ -360,6 +368,24 @@ export default function PublicHackathonPage() {
                 </div>
               </div>
             )}
+            {/* Gallery */}
+            {activeTab === "gallery" && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className="group relative overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 cursor-pointer"
+                    onClick={() => setLightboxSrc(photo.url)}
+                  >
+                    <img
+                      src={photo.url}
+                      alt=""
+                      className="h-40 w-full object-cover transition-opacity group-hover:opacity-75"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Winners section */}
@@ -473,6 +499,33 @@ export default function PublicHackathonPage() {
           </div>
         </Up>
       </div>
+
+      <Dialog.Root
+        open={!!lightboxSrc}
+        onOpenChange={(open) => {
+          if (!open) setLightboxSrc(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 focus:outline-none">
+            {lightboxSrc && (
+              <div className="relative">
+                <img
+                  src={lightboxSrc}
+                  alt=""
+                  className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+                />
+                <Dialog.Close asChild>
+                  <button className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80">
+                    <Cancel width={18} />
+                  </button>
+                </Dialog.Close>
+              </div>
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

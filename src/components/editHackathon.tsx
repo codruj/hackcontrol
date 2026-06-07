@@ -14,6 +14,7 @@ import FinishHackathon from "./finishHackathon";
 import JudgeManager from "./judgeManager";
 import CriteriaManager from "./criteriaManager";
 import CategoryManager from "./categoryManager";
+import GalleryManager from "./galleryManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import clsx from "clsx";
 
@@ -189,6 +190,7 @@ const EditHackathon = (props: EditHackathonProps) => {
           <TabsTrigger value="categories" className="text-xs px-2 py-2">Categories</TabsTrigger>
           <TabsTrigger value="criteria" className="text-xs px-2 py-2">Criteria</TabsTrigger>
           <TabsTrigger value="judges" className="text-xs px-2 py-2">Judges</TabsTrigger>
+          <TabsTrigger value="gallery" className="text-xs px-2 py-2">Gallery</TabsTrigger>
           <TabsTrigger value="finish" className="text-xs px-2 py-2">Finish</TabsTrigger>
           <TabsTrigger value="delete" className="text-xs px-2 py-2">Delete</TabsTrigger>
         </TabsList>
@@ -622,6 +624,9 @@ const EditHackathon = (props: EditHackathonProps) => {
         </TabsContent>
         <TabsContent value="judges">
           <JudgeManager hackathonId={props.id} />
+        </TabsContent>
+        <TabsContent value="gallery">
+          <GalleryManager hackathonId={props.id} />
         </TabsContent>
         <TabsContent value="finish">
           <FinishHackathon url={props.url} is_finished={props.is_finished} />

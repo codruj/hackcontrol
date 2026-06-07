@@ -47,6 +47,7 @@ model Hackathon {
   chatChannels        ChatChannel[]
   enrollments         HackathonEnrollment[]
   teams               Team[]
+  photos              HackathonPhoto[]
 
   @@unique([url, creatorId])
   @@map("hackathons")
@@ -420,6 +421,16 @@ model ChatMessage {
   user      User        @relation(fields: [userId], references: [id])
 
   @@map("chat_messages")
+}
+
+model HackathonPhoto {
+  id          String    @id @default(cuid())
+  url         String
+  hackathonId String
+  uploadedAt  DateTime  @default(now())
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+
+  @@map("hackathon_photos")
 }
 
 model SponsorRegistration {
