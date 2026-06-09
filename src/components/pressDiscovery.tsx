@@ -140,7 +140,7 @@ const PressDiscovery = () => {
       if (result.saved > 0) {
         toast.success(`${result.saved} new candidate${result.saved !== 1 ? "s" : ""} discovered`);
       } else {
-        toast.info("No new candidates found");
+        toast("No new candidates found");
       }
     },
     onError: (e) => toast.error(e.message || "Discovery failed"),
