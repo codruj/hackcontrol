@@ -122,10 +122,10 @@ const PressDiscovery = () => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"pending" | "approved">("pending");
   const [lastResult, setLastResult] = useState<{
-    queriesRun: number;
+    sourcesChecked: number;
     rawResults: number;
     saved: number;
-    searchConfigured: boolean;
+    sourceErrors: string[];
     apiError: string | null;
   } | null>(null);
 
@@ -141,10 +141,8 @@ const PressDiscovery = () => {
       void refetchPending();
       if (result.saved > 0) {
         toast.success(`${result.saved} new candidate${result.saved !== 1 ? "s" : ""} discovered`);
-      } else if (result.rawResults === 0) {
-        toast("Search API returned no results for these queries");
       } else {
-        toast(`${result.rawResults} results fetched, none passed relevance filter`);
+        toast(`${result.rawResults} raw results checked, no new candidates`);
       }
     },
     onError: (e) => toast.error(e.message || "Discovery failed"),
@@ -192,29 +190,20 @@ const PressDiscovery = () => {
             {lastResult && (
               <div className="text-xs text-neutral-500 space-y-1">
                 <span>
-                  Last run: {lastResult.queriesRun} queries · {lastResult.rawResults} raw results · {lastResult.saved} new candidates saved
+                  Last run: {lastResult.sourcesChecked} sources · {lastResult.rawResults} raw results · {lastResult.saved} new candidates saved
                 </span>
                 {lastResult.apiError && (
-                  <p className="text-red-400">
-                    API error: {lastResult.apiError}
-                  </p>
+                  <p className="text-red-400">API error: {lastResult.apiError}</p>
                 )}
-                {!lastResult.searchConfigured && (
-                  <p className="text-yellow-600">
-                    No search API configured — set NEWS_API_KEY or GOOGLE_CSE_KEY + GOOGLE_CSE_ID in .env
+                {lastResult.sourceErrors.length > 0 && (
+                  <p className="text-neutral-600">
+                    Some sources unreachable: {lastResult.sourceErrors.slice(0, 3).join("; ")}
                   </p>
                 )}
               </div>
             )}
           </div>
 
-          {!lastResult && (
-            <p className="text-xs text-neutral-500">
-              Tip: configure <code className="rounded bg-neutral-800 px-1 text-xs">NEWS_API_KEY</code> or{" "}
-              <code className="rounded bg-neutral-800 px-1 text-xs">GOOGLE_CSE_KEY</code> +{" "}
-              <code className="rounded bg-neutral-800 px-1 text-xs">GOOGLE_CSE_ID</code> in your .env for live results.
-            </p>
-          )}
 
           <div className="flex gap-1 border-b border-neutral-800">
             <button

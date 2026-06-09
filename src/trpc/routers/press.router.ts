@@ -1,8 +1,20 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, organizerProcedure } from "..";
-import { search, normalizeUrl, isSearchConfigured } from "@/lib/search";
+import { search, fetchRSSFeed, normalizeUrl, isSearchConfigured } from "@/lib/search";
 import { scoreArticle, generateQueries } from "@/lib/pressScoring";
+import { pressSources } from "@/lib/pressSources";
+
+type ArticleCandidate = {
+  title: string;
+  url: string;
+  source: string | null;
+  snippet: string | null;
+  publishedAt: Date | null;
+  hackathonId: string | null;
+  matchedKeywords: string[];
+  relevanceScore: number;
+};
 
 export const pressRouter = createTRPCRouter({
   discoverArticles: organizerProcedure.mutation(async ({ ctx }) => {
@@ -32,34 +44,26 @@ export const pressRouter = createTRPCRouter({
       .filter((c): c is string => !!c);
 
     const scoringContext = { hackathonNames, sponsorNames, mentorCompanies, judgeCompanies };
-    const queries = generateQueries(hackathonNames, sponsorNames);
+
+    const filterKeywords = [
+      "hackathon",
+      "hackaton",
+      "UTCN",
+      "AIRI",
+      ...hackathonNames,
+    ];
 
     const existing = await ctx.prisma.pressArticle.findMany({ select: { url: true } });
     const seenUrls = new Set(existing.map((e) => normalizeUrl(e.url)));
 
-    const toCreate: {
-      title: string;
-      url: string;
-      source: string | null;
-      snippet: string | null;
-      publishedAt: Date | null;
-      hackathonId: string | null;
-      matchedKeywords: string[];
-      relevanceScore: number;
-    }[] = [];
-
-    let apiError: string | null = null;
+    const toCreate: ArticleCandidate[] = [];
+    const sourceErrors: string[] = [];
     let rawResultCount = 0;
 
-    for (const query of queries) {
-      let results;
-      try {
-        results = await search(query);
-      } catch (err) {
-        apiError = err instanceof Error ? err.message : String(err);
-        break;
-      }
-
+    // --- RSS sources (primary) ---
+    for (const source of pressSources) {
+      const { results, error } = await fetchRSSFeed(source, filterKeywords);
+      if (error) sourceErrors.push(error);
       rawResultCount += results.length;
 
       for (const result of results) {
@@ -68,6 +72,7 @@ export const pressRouter = createTRPCRouter({
         seenUrls.add(normUrl);
 
         const { score, matchedKeywords, relatedHackathonName } = scoreArticle(result, scoringContext);
+        if (score < 3) continue;
 
         const relatedHackathon = relatedHackathonName
           ? hackathons.find((h) => h.name === relatedHackathonName)
@@ -84,10 +89,49 @@ export const pressRouter = createTRPCRouter({
           relevanceScore: score,
         });
       }
-
-      await new Promise((r) => setTimeout(r, 300));
     }
 
+    // --- External API (supplemental, if configured) ---
+    let apiError: string | null = null;
+    if (isSearchConfigured()) {
+      const queries = generateQueries(hackathonNames, sponsorNames);
+      for (const query of queries) {
+        try {
+          const results = await search(query);
+          rawResultCount += results.length;
+
+          for (const result of results) {
+            const normUrl = normalizeUrl(result.url);
+            if (seenUrls.has(normUrl)) continue;
+            seenUrls.add(normUrl);
+
+            const { score, matchedKeywords, relatedHackathonName } = scoreArticle(result, scoringContext);
+            if (score < 3) continue;
+
+            const relatedHackathon = relatedHackathonName
+              ? hackathons.find((h) => h.name === relatedHackathonName)
+              : undefined;
+
+            toCreate.push({
+              title: result.title.slice(0, 500),
+              url: result.url,
+              source: result.source ?? null,
+              snippet: result.snippet ? result.snippet.slice(0, 600) : null,
+              publishedAt: result.publishedAt ? new Date(result.publishedAt) : null,
+              hackathonId: relatedHackathon?.id ?? null,
+              matchedKeywords,
+              relevanceScore: score,
+            });
+          }
+        } catch (err) {
+          apiError = err instanceof Error ? err.message : String(err);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
+
+    // --- Save to DB ---
     let saved = 0;
     for (const article of toCreate) {
       try {
@@ -105,16 +149,16 @@ export const pressRouter = createTRPCRouter({
         });
         saved++;
       } catch {
-        // skip on unique constraint (url already exists)
+        // skip duplicates
       }
     }
 
     return {
-      queriesRun: queries.length,
+      sourcesChecked: pressSources.length,
       rawResults: rawResultCount,
       candidates: toCreate.length,
       saved,
-      searchConfigured: isSearchConfigured(),
+      sourceErrors: sourceErrors.slice(0, 5),
       apiError,
     };
   }),
@@ -152,7 +196,12 @@ export const pressRouter = createTRPCRouter({
     }),
 
   getApprovedPublic: publicProcedure
-    .input(z.object({ hackathonId: z.string().optional(), limit: z.number().min(1).max(50).default(20) }))
+    .input(
+      z.object({
+        hackathonId: z.string().optional(),
+        limit: z.number().min(1).max(50).default(20),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       return ctx.prisma.pressArticle.findMany({
         where: {
