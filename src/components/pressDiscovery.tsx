@@ -141,8 +141,10 @@ const PressDiscovery = () => {
       void refetchPending();
       if (result.saved > 0) {
         toast.success(`${result.saved} new candidate${result.saved !== 1 ? "s" : ""} discovered`);
+      } else if (result.rawResults === 0) {
+        toast("Search API returned no results for these queries");
       } else {
-        toast("No new candidates found");
+        toast(`${result.rawResults} results fetched, none passed relevance filter`);
       }
     },
     onError: (e) => toast.error(e.message || "Discovery failed"),

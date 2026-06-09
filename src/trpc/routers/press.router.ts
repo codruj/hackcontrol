@@ -68,7 +68,6 @@ export const pressRouter = createTRPCRouter({
         seenUrls.add(normUrl);
 
         const { score, matchedKeywords, relatedHackathonName } = scoreArticle(result, scoringContext);
-        if (score < 1) continue;
 
         const relatedHackathon = relatedHackathonName
           ? hackathons.find((h) => h.name === relatedHackathonName)
