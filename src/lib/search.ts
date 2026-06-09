@@ -99,20 +99,44 @@ function passesKeywordFilter(result: SearchResult, keywords: string[]): boolean 
   return keywords.some((kw) => text.includes(normalizeText(kw)));
 }
 
+function isValidHttpUrl(str: string): boolean {
+  try {
+    const u = new URL(str);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function extractArticlesFromHTML(html: string, sourceName: string): SearchResult[] {
   const results: SearchResult[] = [];
   const seen = new Set<string>();
 
-  const headingLinkRegex =
-    /<h[2-4][^>]*>[\s\S]{0,300}?<a[^>]+href="(https?:\/\/[^"#?][^"]*)"[^>]*>([\s\S]{1,300}?)<\/a>[\s\S]{0,200}?<\/h[2-4]>/gi;
+  // Extract href + title from anchor tags inside h2/h3 headings
+  const hrefRegex = /href="(https?:\/\/[^"\s]{10,500})"/gi;
+  const titleRegex = />([\s\S]{5,300}?)<\/a>/i;
 
-  let match;
-  while ((match = headingLinkRegex.exec(html)) !== null) {
-    const url = match[1]!.trim();
-    const title = stripHTML(match[2]!).trim();
-    if (!title || title.length < 5 || !url || seen.has(url)) continue;
-    seen.add(url);
-    results.push({ title, url, source: sourceName });
+  // Split on <h2 or <h3 boundaries and process each heading block
+  const blocks = html.split(/<h[23][^>]*>/i);
+  for (const block of blocks) {
+    const closeIdx = block.indexOf("</h");
+    if (closeIdx === -1) continue;
+    const headingContent = block.slice(0, closeIdx);
+
+    const hrefMatch = hrefRegex.exec(headingContent);
+    hrefRegex.lastIndex = 0;
+    if (!hrefMatch) continue;
+
+    const rawUrl = hrefMatch[1]!.trim().replace(/[\s\n\r\t]+/g, "");
+    if (!isValidHttpUrl(rawUrl) || seen.has(rawUrl)) continue;
+
+    const titleMatch = titleRegex.exec(headingContent);
+    if (!titleMatch) continue;
+    const title = stripHTML(titleMatch[1]!).trim();
+    if (!title || title.length < 5) continue;
+
+    seen.add(rawUrl);
+    results.push({ title, url: rawUrl, source: sourceName });
   }
 
   return results;

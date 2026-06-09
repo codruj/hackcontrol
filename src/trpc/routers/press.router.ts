@@ -183,8 +183,8 @@ export const pressRouter = createTRPCRouter({
       rawResults: rawResultCount,
       candidates: toCreate.length,
       saved,
-      sourceErrors: sourceErrors.slice(0, 5),
-      apiError,
+      sourceErrors: sourceErrors.slice(0, 5).map((e) => e.slice(0, 120)),
+      apiError: apiError ? apiError.slice(0, 200) : null,
     };
   }),
 
