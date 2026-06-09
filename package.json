@@ -36,6 +36,8 @@
     "canvas-confetti": "1.6.0",
     "clsx": "2.0.0",
     "framer-motion": "10.15.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "nanoid": "^5.1.5",
     "next": "^15.4.6",
     "next-auth": "^4.24.11",

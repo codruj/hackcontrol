@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "..";
+import { createTRPCRouter, organizerProcedure, protectedProcedure, publicProcedure } from "..";
 
 // Helper: compute weighted average score and number of complete judges for a participation
 function computeWeightedScore(
@@ -28,7 +28,7 @@ function computeWeightedScore(
 
   let total = 0;
   let completeJudges = 0;
-  for (const criterionScores of byJudge.values()) {
+  for (const criterionScores of Array.from(byJudge.values())) {
     if (criterionScores.size < criteria.length) continue;
     let ws = 0;
     for (const c of criteria) ws += (criterionScores.get(c.id) ?? 0) * (c.weight / 100);
@@ -403,5 +403,98 @@ export const scoringRouter = createTRPCRouter({
         where: { id: input.hackathonId },
         data: { min_judges_required: input.minJudges },
       });
+    }),
+
+  //------
+  // Export full judging results for PDF download (organizer/admin only) =>
+  getResultsForExport: organizerProcedure
+    .input(z.object({ hackathonId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const isAdmin = ctx.session.user.role === "ADMIN";
+
+      const hackathon = await ctx.prisma.hackathon.findFirst({
+        where: {
+          id: input.hackathonId,
+          ...(isAdmin ? {} : { creatorId: ctx.session.user.id }),
+        },
+        select: { id: true, name: true, url: true, min_judges_required: true },
+      });
+
+      if (!hackathon) throw new Error("Hackathon not found or not authorized");
+
+      const [criteria, judges, participations] = await Promise.all([
+        ctx.prisma.criterion.findMany({
+          where: { hackathonId: hackathon.id },
+          orderBy: { order: "asc" },
+        }),
+        ctx.prisma.judge.findMany({
+          where: { hackathonId: hackathon.id },
+          include: { user: { select: { name: true, username: true } } },
+          orderBy: { createdAt: "asc" },
+        }),
+        ctx.prisma.participation.findMany({
+          where: { hackathon_url: hackathon.url },
+          include: { scores: true },
+        }),
+      ]);
+
+      const judgeCount = judges.length;
+      const effectiveMinJudges = Math.min(
+        hackathon.min_judges_required,
+        Math.max(1, judgeCount),
+      );
+
+      const enriched = participations.map((p) => {
+        const { averageScore, completeJudges } = computeWeightedScore(
+          p.scores.map((s) => ({
+            judgeId: s.judgeId,
+            criterionId: s.criterionId,
+            score: s.score,
+          })),
+          criteria,
+        );
+        return {
+          id: p.id,
+          title: p.title,
+          creatorName: p.creatorName,
+          team_members: p.team_members,
+          scores: p.scores.map((s) => ({
+            judgeId: s.judgeId,
+            criterionId: s.criterionId,
+            score: s.score,
+          })),
+          averageScore,
+          completeJudges,
+          isEligible: completeJudges >= effectiveMinJudges,
+        };
+      });
+
+      const ranked = enriched
+        .filter((p) => p.isEligible)
+        .sort((a, b) =>
+          b.averageScore !== a.averageScore
+            ? b.averageScore - a.averageScore
+            : b.completeJudges - a.completeJudges,
+        )
+        .map((p, i) => ({ ...p, rank: i + 1 as number | null }));
+
+      const unranked = enriched
+        .filter((p) => !p.isEligible)
+        .sort((a, b) => b.averageScore - a.averageScore)
+        .map((p) => ({ ...p, rank: null as number | null }));
+
+      return {
+        hackathonName: hackathon.name,
+        criteria: criteria.map((c) => ({
+          id: c.id,
+          name: c.name,
+          weight: c.weight,
+        })),
+        judges: judges.map((j) => ({
+          id: j.id,
+          name: j.user.name ?? j.user.username ?? "Judge",
+        })),
+        participations: [...ranked, ...unranked],
+      };
     }),
 });

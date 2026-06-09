@@ -21,6 +21,7 @@ import VolunteerManager from "@/components/volunteerManager";
 import MentorManager from "@/components/mentorManager";
 import SponsorLeads from "@/components/sponsorLeads";
 import PressDiscovery from "@/components/pressDiscovery";
+import DownloadResultsPDF from "@/components/downloadResultsPDF";
 
 function computeAvgScore(
   scores: { score: number; criterionId?: string | null; judge: { id: string } }[],
@@ -271,6 +272,7 @@ const DashUrl = () => {
                 <div>
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-lg font-semibold">Submissions</h2>
+                    <DownloadResultsPDF hackathonId={hackathon.id} hackathonName={hackathon.name} />
                   </div>
                   <input
                     type="text"
