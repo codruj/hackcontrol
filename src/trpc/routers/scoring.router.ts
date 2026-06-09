@@ -422,7 +422,7 @@ export const scoringRouter = createTRPCRouter({
 
       if (!hackathon) throw new Error("Hackathon not found or not authorized");
 
-      const [criteria, judges, participations] = await Promise.all([
+      const [criteria, judges, participations, categories] = await Promise.all([
         ctx.prisma.criterion.findMany({
           where: { hackathonId: hackathon.id },
           orderBy: { order: "asc" },
@@ -436,6 +436,10 @@ export const scoringRouter = createTRPCRouter({
           where: { hackathon_url: hackathon.url },
           include: { scores: true },
         }),
+        ctx.prisma.hackathonCategory.findMany({
+          where: { hackathonId: hackathon.id },
+          orderBy: { createdAt: "asc" },
+        }),
       ]);
 
       const judgeCount = judges.length;
@@ -443,6 +447,8 @@ export const scoringRouter = createTRPCRouter({
         hackathon.min_judges_required,
         Math.max(1, judgeCount),
       );
+
+      const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
 
       const enriched = participations.map((p) => {
         const { averageScore, completeJudges } = computeWeightedScore(
@@ -458,6 +464,8 @@ export const scoringRouter = createTRPCRouter({
           title: p.title,
           creatorName: p.creatorName,
           team_members: p.team_members,
+          categoryId: p.categoryId ?? null,
+          categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
           scores: p.scores.map((s) => ({
             judgeId: s.judgeId,
             criterionId: s.criterionId,
@@ -469,19 +477,33 @@ export const scoringRouter = createTRPCRouter({
         };
       });
 
-      const ranked = enriched
-        .filter((p) => p.isEligible)
-        .sort((a, b) =>
-          b.averageScore !== a.averageScore
-            ? b.averageScore - a.averageScore
-            : b.completeJudges - a.completeJudges,
-        )
-        .map((p, i) => ({ ...p, rank: i + 1 as number | null }));
+      const rankGroup = (group: typeof enriched) => {
+        const eligible = group
+          .filter((p) => p.isEligible)
+          .sort((a, b) =>
+            b.averageScore !== a.averageScore
+              ? b.averageScore - a.averageScore
+              : b.completeJudges - a.completeJudges,
+          )
+          .map((p, i) => ({ ...p, rank: i + 1 as number | null }));
+        const ineligible = group
+          .filter((p) => !p.isEligible)
+          .sort((a, b) => b.averageScore - a.averageScore)
+          .map((p) => ({ ...p, rank: null as number | null }));
+        return [...eligible, ...ineligible];
+      };
 
-      const unranked = enriched
-        .filter((p) => !p.isEligible)
-        .sort((a, b) => b.averageScore - a.averageScore)
-        .map((p) => ({ ...p, rank: null as number | null }));
+      const hasCategories = categories.length > 0;
+
+      const rankedParticipations = hasCategories
+        ? categories.flatMap((cat) =>
+            rankGroup(enriched.filter((p) => p.categoryId === cat.id)),
+          )
+        : rankGroup(enriched);
+
+      const uncategorized = hasCategories
+        ? rankGroup(enriched.filter((p) => !p.categoryId))
+        : [];
 
       return {
         hackathonName: hackathon.name,
@@ -494,7 +516,8 @@ export const scoringRouter = createTRPCRouter({
           id: j.id,
           name: j.user.name ?? j.user.username ?? "Judge",
         })),
-        participations: [...ranked, ...unranked],
+        categories: categories.map((c) => ({ id: c.id, name: c.name })),
+        participations: [...rankedParticipations, ...uncategorized],
       };
     }),
 });

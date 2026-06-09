@@ -7,21 +7,26 @@ interface Props {
   hackathonName: string;
 }
 
+type Participation = {
+  id: string;
+  title: string;
+  creatorName: string;
+  team_members: unknown;
+  categoryId: string | null;
+  categoryName: string | null;
+  scores: { judgeId: string; criterionId: string | null; score: number }[];
+  averageScore: number;
+  completeJudges: number;
+  isEligible: boolean;
+  rank: number | null;
+};
+
 type ExportData = {
   hackathonName: string;
   criteria: { id: string; name: string; weight: number }[];
   judges: { id: string; name: string }[];
-  participations: {
-    id: string;
-    title: string;
-    creatorName: string;
-    team_members: unknown;
-    scores: { judgeId: string; criterionId: string | null; score: number }[];
-    averageScore: number;
-    completeJudges: number;
-    isEligible: boolean;
-    rank: number | null;
-  }[];
+  categories: { id: string; name: string }[];
+  participations: Participation[];
 };
 
 function getTeamName(p: { team_members: unknown; creatorName: string }): string {
@@ -33,11 +38,61 @@ function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max - 1) + "…" : str;
 }
 
+function buildRow(
+  p: Participation,
+  judges: ExportData["judges"],
+  criteria: ExportData["criteria"],
+  hasCriteria: boolean,
+  includeCategory: boolean,
+): (string | number)[] {
+  const row: (string | number)[] = [];
+
+  row.push(p.rank !== null ? p.rank : "—");
+  if (includeCategory) row.push(p.categoryName ? truncate(p.categoryName, 20) : "—");
+  row.push(truncate(getTeamName(p), 30));
+  row.push(truncate(p.title, 40));
+  row.push(p.averageScore > 0 ? p.averageScore.toFixed(2) : "—");
+
+  if (hasCriteria) {
+    for (const judge of judges) {
+      const judgeScores = p.scores.filter((s) => s.judgeId === judge.id && s.criterionId !== null);
+      const scoreMap = new Map(judgeScores.map((s) => [s.criterionId!, s.score]));
+      const isComplete = scoreMap.size >= criteria.length;
+
+      if (isComplete) {
+        let ws = 0;
+        for (const c of criteria) ws += (scoreMap.get(c.id) ?? 0) * (c.weight / 100);
+        row.push(ws.toFixed(2));
+      } else {
+        row.push("—");
+      }
+
+      for (const c of criteria) {
+        const s = scoreMap.get(c.id);
+        row.push(s !== undefined ? s.toString() : "—");
+      }
+    }
+
+    for (const c of criteria) {
+      const vals = p.scores.filter((s) => s.criterionId === c.id).map((s) => s.score);
+      row.push(vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : "—");
+    }
+  } else {
+    for (const judge of judges) {
+      const flat = p.scores.find((s) => s.judgeId === judge.id && s.criterionId === null);
+      row.push(flat !== undefined ? flat.score.toFixed(1) : "—");
+    }
+  }
+
+  return row;
+}
+
 async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
   const hasCriteria = data.criteria.length > 0;
+  const hasCategories = data.categories.length > 0;
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -59,7 +114,10 @@ async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
     return;
   }
 
-  const fixedHeaders = ["Rank", "Team", "Project / Application", "Overall Score"];
+  // Build column headers
+  const fixedHeaders = hasCategories
+    ? ["Rank", "Category", "Team", "Project / Application", "Overall Score"]
+    : ["Rank", "Team", "Project / Application", "Overall Score"];
 
   const judgeHeaders: string[] = [];
   if (hasCriteria) {
@@ -81,52 +139,9 @@ async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
 
   const headers = [...fixedHeaders, ...judgeHeaders];
 
-  const rows: (string | number)[][] = data.participations.map((p) => {
-    const row: (string | number)[] = [];
-
-    row.push(p.rank !== null ? p.rank : "—");
-    row.push(truncate(getTeamName(p), 30));
-    row.push(truncate(p.title, 40));
-    row.push(p.averageScore > 0 ? p.averageScore.toFixed(2) : "—");
-
-    if (hasCriteria) {
-      for (const judge of data.judges) {
-        const judgeScores = p.scores.filter((s) => s.judgeId === judge.id && s.criterionId !== null);
-        const scoreMap = new Map(judgeScores.map((s) => [s.criterionId!, s.score]));
-        const isComplete = scoreMap.size >= data.criteria.length;
-
-        if (isComplete) {
-          let ws = 0;
-          for (const c of data.criteria) ws += (scoreMap.get(c.id) ?? 0) * (c.weight / 100);
-          row.push(ws.toFixed(2));
-        } else {
-          row.push("—");
-        }
-
-        for (const c of data.criteria) {
-          const s = scoreMap.get(c.id);
-          row.push(s !== undefined ? s.toString() : "—");
-        }
-      }
-
-      for (const c of data.criteria) {
-        const vals = p.scores
-          .filter((s) => s.criterionId === c.id)
-          .map((s) => s.score);
-        row.push(vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : "—");
-      }
-    } else {
-      for (const judge of data.judges) {
-        const flat = p.scores.find((s) => s.judgeId === judge.id && s.criterionId === null);
-        row.push(flat !== undefined ? flat.score.toFixed(1) : "—");
-      }
-    }
-
-    return row;
-  });
-
+  // Column widths
+  const fixedColWidths = hasCategories ? [10, 22, 34, 48, 18] : [10, 38, 52, 18];
   const totalCols = headers.length;
-  const fixedColWidths = [10, 38, 52, 18];
   const remainingWidth = pageWidth - 28 - fixedColWidths.reduce((a, b) => a + b, 0);
   const dynamicCols = totalCols - fixedColWidths.length;
   const dynWidth = dynamicCols > 0 ? Math.max(10, remainingWidth / dynamicCols) : 14;
@@ -137,36 +152,30 @@ async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
     columnStyles[i] = { cellWidth: dynWidth };
   }
 
-  autoTable(doc, {
+  const tableOptions = {
     head: [headers],
-    body: rows,
-    startY: 25,
     styles: {
       fontSize: 7,
       cellPadding: 1.8,
-      overflow: "linebreak",
-      valign: "middle",
-      lineColor: [210, 210, 210],
+      overflow: "linebreak" as const,
+      valign: "middle" as const,
+      lineColor: [210, 210, 210] as [number, number, number],
       lineWidth: 0.1,
     },
     headStyles: {
-      fillColor: [25, 25, 35],
-      textColor: [220, 220, 220],
+      fillColor: [25, 25, 35] as [number, number, number],
+      textColor: [220, 220, 220] as [number, number, number],
       fontSize: 7,
-      fontStyle: "bold",
-      halign: "center",
-      valign: "middle",
+      fontStyle: "bold" as const,
+      halign: "center" as const,
+      valign: "middle" as const,
       cellPadding: 2,
     },
-    alternateRowStyles: {
-      fillColor: [248, 248, 250],
-    },
-    bodyStyles: {
-      textColor: [40, 40, 40],
-    },
+    alternateRowStyles: { fillColor: [248, 248, 250] as [number, number, number] },
+    bodyStyles: { textColor: [40, 40, 40] as [number, number, number] },
     columnStyles,
     margin: { top: 12, left: 14, right: 14 },
-    didDrawPage: (hookData) => {
+    didDrawPage: (hookData: { pageNumber: number }) => {
       const pageCount = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
       doc.setFontSize(7);
       doc.setTextColor(150, 150, 150);
@@ -177,7 +186,71 @@ async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
         { align: "center" },
       );
     },
-  });
+  };
+
+  if (hasCategories) {
+    // Separate table section per category
+    let startY = 25;
+
+    const groups: { label: string; items: Participation[] }[] = data.categories.map((cat) => ({
+      label: cat.name,
+      items: data.participations.filter((p) => p.categoryId === cat.id),
+    }));
+
+    const uncategorized = data.participations.filter((p) => !p.categoryId);
+    if (uncategorized.length > 0) {
+      groups.push({ label: "Uncategorized", items: uncategorized });
+    }
+
+    for (const group of groups) {
+      if (group.items.length === 0) continue;
+
+      // Category section heading
+      doc.setFontSize(9);
+      doc.setTextColor(40, 40, 40);
+      doc.setFont("helvetica", "bold");
+      doc.text(group.label, 14, startY + 3);
+      doc.setFont("helvetica", "normal");
+
+      // Per-section table: no Category column (already split by category heading)
+      const sectionFixedHeaders = ["Rank", "Team", "Project / Application", "Overall Score"];
+      const sectionHeaders = [...sectionFixedHeaders, ...judgeHeaders];
+      const sectionFixedWidths = [10, 38, 52, 18];
+      const sectionRemaining = pageWidth - 28 - sectionFixedWidths.reduce((a, b) => a + b, 0);
+      const sectionDynWidth = dynamicCols > 0 ? Math.max(10, sectionRemaining / dynamicCols) : 14;
+      const sectionColStyles: Record<number, { cellWidth: number }> = {};
+      sectionFixedWidths.forEach((w, i) => { sectionColStyles[i] = { cellWidth: w }; });
+      for (let i = sectionFixedWidths.length; i < sectionHeaders.length; i++) {
+        sectionColStyles[i] = { cellWidth: sectionDynWidth };
+      }
+
+      // Build rows without the category column
+      const sectionRows = group.items.map((p) =>
+        buildRow(p, data.judges, data.criteria, hasCriteria, false),
+      );
+
+      autoTable(doc, {
+        ...tableOptions,
+        head: [sectionHeaders],
+        body: sectionRows,
+        startY: startY + 6,
+        columnStyles: sectionColStyles,
+      });
+
+      startY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+
+      if (startY > doc.internal.pageSize.getHeight() - 30) {
+        doc.addPage();
+        startY = 14;
+      }
+    }
+  } else {
+    // Single flat table
+    const rows = data.participations.map((p) =>
+      buildRow(p, data.judges, data.criteria, hasCriteria, false),
+    );
+    autoTable(doc, { ...tableOptions, body: rows, startY: 25 });
+  }
 
   doc.save(`${safeFileName(hackathonName)}-judging-results.pdf`);
 }
