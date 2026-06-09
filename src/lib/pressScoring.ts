@@ -25,10 +25,14 @@ const HACKATHON_TERMS = ["hackathon", "hackaton"];
 const INNOVATION_TERMS = ["student innovation", "innovation event"];
 
 function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "");
+  try {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "");
+  } catch {
+    return text.toLowerCase();
+  }
 }
 
 function containsTerms(text: string, terms: string[]): string[] {
@@ -116,7 +120,7 @@ export function scoreArticle(
 
   return {
     score: Math.max(0, score),
-    matchedKeywords: [...matched],
+    matchedKeywords: Array.from(matched),
     relatedHackathonName,
   };
 }
@@ -147,5 +151,5 @@ export function generateQueries(
     }
   }
 
-  return [...new Set(queries)].slice(0, 15);
+  return Array.from(new Set(queries)).slice(0, 15);
 }

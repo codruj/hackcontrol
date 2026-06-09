@@ -62,27 +62,31 @@ export const pressRouter = createTRPCRouter({
 
     const processResults = (results: import("@/lib/search").SearchResult[]) => {
       for (const result of results) {
-        const normUrl = normalizeUrl(result.url);
-        if (seenUrls.has(normUrl)) continue;
-        seenUrls.add(normUrl);
+        try {
+          const normUrl = normalizeUrl(result.url);
+          if (seenUrls.has(normUrl)) continue;
+          seenUrls.add(normUrl);
 
-        const { score, matchedKeywords, relatedHackathonName } = scoreArticle(result, scoringContext);
-        if (score < 3) continue;
+          const { score, matchedKeywords, relatedHackathonName } = scoreArticle(result, scoringContext);
+          if (score < 3) continue;
 
-        const relatedHackathon = relatedHackathonName
-          ? hackathons.find((h) => h.name === relatedHackathonName)
-          : undefined;
+          const relatedHackathon = relatedHackathonName
+            ? hackathons.find((h) => h.name === relatedHackathonName)
+            : undefined;
 
-        toCreate.push({
-          title: result.title.slice(0, 500),
-          url: result.url,
-          source: result.source ?? null,
-          snippet: result.snippet ? result.snippet.slice(0, 600) : null,
-          publishedAt: result.publishedAt ? new Date(result.publishedAt) : null,
-          hackathonId: relatedHackathon?.id ?? null,
-          matchedKeywords,
-          relevanceScore: score,
-        });
+          toCreate.push({
+            title: result.title.slice(0, 500),
+            url: result.url,
+            source: result.source ?? null,
+            snippet: result.snippet ? result.snippet.slice(0, 600) : null,
+            publishedAt: result.publishedAt ? new Date(result.publishedAt) : null,
+            hackathonId: relatedHackathon?.id ?? null,
+            matchedKeywords,
+            relevanceScore: score,
+          });
+        } catch {
+          // skip malformed results
+        }
       }
     };
 

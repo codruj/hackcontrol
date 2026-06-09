@@ -25,10 +25,14 @@ export function isSearchConfigured(): boolean {
 }
 
 function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "");
+  try {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "");
+  } catch {
+    return text.toLowerCase();
+  }
 }
 
 function stripHTML(html: string): string {
@@ -142,20 +146,36 @@ function extractArticlesFromHTML(html: string, sourceName: string): SearchResult
   return results;
 }
 
+function safeUrl(raw: string): string | null {
+  try {
+    const cleaned = raw.trim().replace(/\s+/g, "%20");
+    const u = new URL(cleaned);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 export async function searchWordPressSite(
   baseUrl: string,
   sourceName: string,
   query: string,
 ): Promise<{ results: SearchResult[]; error?: string }> {
-  const searchUrl = `${baseUrl.replace(/\/$/, "")}/?s=${encodeURIComponent(query)}`;
+  const safe = safeUrl(`${baseUrl.replace(/\/$/, "")}/?s=${encodeURIComponent(query)}`);
+  if (!safe) return { results: [], error: `${sourceName}: invalid base URL` };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
   try {
-    const res = await fetch(searchUrl, {
-      signal: AbortSignal.timeout(12000),
+    const res = await fetch(safe, {
+      signal: controller.signal,
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HackcontrolBot/1.0)",
         Accept: "text/html",
       },
     });
+    clearTimeout(timer);
     if (!res.ok) {
       return { results: [], error: `${sourceName} search: HTTP ${res.status}` };
     }
@@ -163,6 +183,7 @@ export async function searchWordPressSite(
     const results = extractArticlesFromHTML(html, sourceName);
     return { results };
   } catch (err) {
+    clearTimeout(timer);
     return {
       results: [],
       error: `${sourceName} search: ${err instanceof Error ? err.message : String(err)}`,
@@ -174,11 +195,16 @@ export async function fetchRSSFeed(
   source: PressSource,
   filterKeywords: string[],
 ): Promise<{ results: SearchResult[]; error?: string }> {
+  const rssUrl = source.rssUrl;
+  if (!rssUrl) return { results: [] };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(source.rssUrl, {
-      signal: AbortSignal.timeout(10000),
+    const res = await fetch(rssUrl, {
+      signal: controller.signal,
       headers: { "User-Agent": "Mozilla/5.0 (compatible; HackcontrolBot/1.0)" },
     });
+    clearTimeout(timer);
     if (!res.ok) {
       return { results: [], error: `${source.name}: HTTP ${res.status}` };
     }
@@ -189,6 +215,7 @@ export async function fetchRSSFeed(
       : items.filter((r) => passesKeywordFilter(r, filterKeywords));
     return { results: filtered };
   } catch (err) {
+    clearTimeout(timer);
     return {
       results: [],
       error: `${source.name}: ${err instanceof Error ? err.message : String(err)}`,
