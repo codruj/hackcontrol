@@ -26,54 +26,53 @@ async function searchNewsApi(query: string, apiKey: string): Promise<SearchResul
   const params = new URLSearchParams({
     q: query,
     sortBy: "publishedAt",
-    pageSize: "5",
+    pageSize: "10",
     apiKey,
   });
-  try {
-    const res = await fetch(`https://newsapi.org/v2/everything?${params}`, {
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = await res.json() as {
-      articles?: { title?: string; url?: string; source?: { name?: string }; description?: string; publishedAt?: string }[];
-    };
-    return (data.articles ?? [])
-      .filter((a) => a.url && a.title && !a.title.startsWith("[Removed]"))
-      .map((a) => ({
-        title: a.title!,
-        url: a.url!,
-        source: a.source?.name ?? new URL(a.url!).hostname,
-        snippet: a.description ?? undefined,
-        publishedAt: a.publishedAt,
-      }));
-  } catch {
-    return [];
+  const res = await fetch(`https://newsapi.org/v2/everything?${params}`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => res.statusText);
+    throw new Error(`NewsAPI ${res.status}: ${body}`);
   }
+  const data = await res.json() as {
+    articles?: { title?: string; url?: string; source?: { name?: string }; description?: string; publishedAt?: string }[];
+  };
+  return (data.articles ?? [])
+    .filter((a) => a.url && a.title && !a.title.startsWith("[Removed]"))
+    .map((a) => ({
+      title: a.title!,
+      url: a.url!,
+      source: a.source?.name ?? new URL(a.url!).hostname,
+      snippet: a.description ?? undefined,
+      publishedAt: a.publishedAt,
+    }));
 }
 
 async function searchGoogleCSE(query: string, key: string, cx: string): Promise<SearchResult[]> {
-  const params = new URLSearchParams({ key, cx, q: query, num: "5" });
-  try {
-    const res = await fetch(
-      `https://www.googleapis.com/customsearch/v1?${params}`,
-      { signal: AbortSignal.timeout(8000) },
-    );
-    if (!res.ok) return [];
-    const data = await res.json() as {
-      items?: { title?: string; link?: string; displayLink?: string; snippet?: string; pagemap?: { metatags?: Record<string, string>[] } }[];
-    };
-    return (data.items ?? [])
-      .filter((item) => item.link && item.title)
-      .map((item) => ({
-        title: item.title!,
-        url: item.link!,
-        source: item.displayLink ?? new URL(item.link!).hostname,
-        snippet: item.snippet,
-        publishedAt: item.pagemap?.metatags?.[0]?.["article:published_time"],
-      }));
-  } catch {
-    return [];
+  const params = new URLSearchParams({ key, cx, q: query, num: "10", hl: "ro" });
+  const res = await fetch(
+    `https://www.googleapis.com/customsearch/v1?${params}`,
+    { signal: AbortSignal.timeout(10000) },
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => res.statusText);
+    throw new Error(`Google CSE ${res.status}: ${body}`);
   }
+  const data = await res.json() as {
+    items?: { title?: string; link?: string; displayLink?: string; snippet?: string; pagemap?: { metatags?: Record<string, string>[] } }[];
+    searchInformation?: { totalResults?: string };
+  };
+  return (data.items ?? [])
+    .filter((item) => item.link && item.title)
+    .map((item) => ({
+      title: item.title!,
+      url: item.link!,
+      source: item.displayLink ?? new URL(item.link!).hostname,
+      snippet: item.snippet,
+      publishedAt: item.pagemap?.metatags?.[0]?.["article:published_time"],
+    }));
 }
 
 export async function search(query: string): Promise<SearchResult[]> {

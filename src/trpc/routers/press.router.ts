@@ -48,15 +48,27 @@ export const pressRouter = createTRPCRouter({
       relevanceScore: number;
     }[] = [];
 
+    let apiError: string | null = null;
+    let rawResultCount = 0;
+
     for (const query of queries) {
-      const results = await search(query);
+      let results;
+      try {
+        results = await search(query);
+      } catch (err) {
+        apiError = err instanceof Error ? err.message : String(err);
+        break;
+      }
+
+      rawResultCount += results.length;
+
       for (const result of results) {
         const normUrl = normalizeUrl(result.url);
         if (seenUrls.has(normUrl)) continue;
         seenUrls.add(normUrl);
 
         const { score, matchedKeywords, relatedHackathonName } = scoreArticle(result, scoringContext);
-        if (score < 5) continue;
+        if (score < 1) continue;
 
         const relatedHackathon = relatedHackathonName
           ? hackathons.find((h) => h.name === relatedHackathonName)
@@ -100,9 +112,11 @@ export const pressRouter = createTRPCRouter({
 
     return {
       queriesRun: queries.length,
+      rawResults: rawResultCount,
       candidates: toCreate.length,
       saved,
       searchConfigured: isSearchConfigured(),
+      apiError,
     };
   }),
 

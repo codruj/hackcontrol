@@ -123,8 +123,10 @@ const PressDiscovery = () => {
   const [tab, setTab] = useState<"pending" | "approved">("pending");
   const [lastResult, setLastResult] = useState<{
     queriesRun: number;
+    rawResults: number;
     saved: number;
     searchConfigured: boolean;
+    apiError: string | null;
   } | null>(null);
 
   const { data: pending = [], refetch: refetchPending, isLoading: loadingPending } =
@@ -186,14 +188,21 @@ const PressDiscovery = () => {
             </button>
 
             {lastResult && (
-              <span className="text-xs text-neutral-500">
-                Last run: {lastResult.queriesRun} queries · {lastResult.saved} new candidates
-                {!lastResult.searchConfigured && (
-                  <span className="ml-2 text-yellow-600">
-                    (no search API configured — set NEWS_API_KEY or GOOGLE_CSE_KEY + GOOGLE_CSE_ID)
-                  </span>
+              <div className="text-xs text-neutral-500 space-y-1">
+                <span>
+                  Last run: {lastResult.queriesRun} queries · {lastResult.rawResults} raw results · {lastResult.saved} new candidates saved
+                </span>
+                {lastResult.apiError && (
+                  <p className="text-red-400">
+                    API error: {lastResult.apiError}
+                  </p>
                 )}
-              </span>
+                {!lastResult.searchConfigured && (
+                  <p className="text-yellow-600">
+                    No search API configured — set NEWS_API_KEY or GOOGLE_CSE_KEY + GOOGLE_CSE_ID in .env
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
