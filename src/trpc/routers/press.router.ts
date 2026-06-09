@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, organizerProcedure } from "..";
-import { search, fetchRSSFeed, normalizeUrl, isSearchConfigured } from "@/lib/search";
+import { search, fetchRSSFeed, searchWordPressSite, normalizeUrl, isSearchConfigured } from "@/lib/search";
 import { scoreArticle, generateQueries } from "@/lib/pressScoring";
-import { pressSources } from "@/lib/pressSources";
+import { pressSources, searchQueries } from "@/lib/pressSources";
 
 type ArticleCandidate = {
   title: string;
@@ -60,12 +60,7 @@ export const pressRouter = createTRPCRouter({
     const sourceErrors: string[] = [];
     let rawResultCount = 0;
 
-    // --- RSS sources (primary) ---
-    for (const source of pressSources) {
-      const { results, error } = await fetchRSSFeed(source, filterKeywords);
-      if (error) sourceErrors.push(error);
-      rawResultCount += results.length;
-
+    const processResults = (results: import("@/lib/search").SearchResult[]) => {
       for (const result of results) {
         const normUrl = normalizeUrl(result.url);
         if (seenUrls.has(normUrl)) continue;
@@ -89,6 +84,36 @@ export const pressRouter = createTRPCRouter({
           relevanceScore: score,
         });
       }
+    };
+
+    // --- RSS feeds ---
+    const rssFetches = pressSources
+      .filter((s) => s.rssUrl)
+      .map((s) => fetchRSSFeed(s, filterKeywords));
+    const rssResponses = await Promise.all(rssFetches);
+    for (const { results, error } of rssResponses) {
+      if (error) sourceErrors.push(error);
+      rawResultCount += results.length;
+      processResults(results);
+    }
+
+    // --- WordPress site search (finds historical articles) ---
+    const allQueries = [
+      ...searchQueries,
+      ...hackathonNames.slice(0, 3).map((n) => `${n} hackathon`),
+    ];
+    const wpSources = pressSources.filter((s) => s.wordpressBase);
+    for (const query of allQueries) {
+      const wpFetches = wpSources.map((s) =>
+        searchWordPressSite(s.wordpressBase!, s.name, query),
+      );
+      const wpResponses = await Promise.all(wpFetches);
+      for (const { results, error } of wpResponses) {
+        if (error) sourceErrors.push(error);
+        rawResultCount += results.length;
+        processResults(results);
+      }
+      await new Promise((r) => setTimeout(r, 200));
     }
 
     // --- External API (supplemental, if configured) ---

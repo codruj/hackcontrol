@@ -99,6 +99,53 @@ function passesKeywordFilter(result: SearchResult, keywords: string[]): boolean 
   return keywords.some((kw) => text.includes(normalizeText(kw)));
 }
 
+function extractArticlesFromHTML(html: string, sourceName: string): SearchResult[] {
+  const results: SearchResult[] = [];
+  const seen = new Set<string>();
+
+  const headingLinkRegex =
+    /<h[2-4][^>]*>[\s\S]{0,300}?<a[^>]+href="(https?:\/\/[^"#?][^"]*)"[^>]*>([\s\S]{1,300}?)<\/a>[\s\S]{0,200}?<\/h[2-4]>/gi;
+
+  let match;
+  while ((match = headingLinkRegex.exec(html)) !== null) {
+    const url = match[1]!.trim();
+    const title = stripHTML(match[2]!).trim();
+    if (!title || title.length < 5 || !url || seen.has(url)) continue;
+    seen.add(url);
+    results.push({ title, url, source: sourceName });
+  }
+
+  return results;
+}
+
+export async function searchWordPressSite(
+  baseUrl: string,
+  sourceName: string,
+  query: string,
+): Promise<{ results: SearchResult[]; error?: string }> {
+  const searchUrl = `${baseUrl.replace(/\/$/, "")}/?s=${encodeURIComponent(query)}`;
+  try {
+    const res = await fetch(searchUrl, {
+      signal: AbortSignal.timeout(12000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; HackcontrolBot/1.0)",
+        Accept: "text/html",
+      },
+    });
+    if (!res.ok) {
+      return { results: [], error: `${sourceName} search: HTTP ${res.status}` };
+    }
+    const html = await res.text();
+    const results = extractArticlesFromHTML(html, sourceName);
+    return { results };
+  } catch (err) {
+    return {
+      results: [],
+      error: `${sourceName} search: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
 export async function fetchRSSFeed(
   source: PressSource,
   filterKeywords: string[],
