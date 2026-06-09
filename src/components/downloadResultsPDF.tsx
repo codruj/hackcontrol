@@ -38,53 +38,8 @@ function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max - 1) + "…" : str;
 }
 
-function buildRow(
-  p: Participation,
-  judges: ExportData["judges"],
-  criteria: ExportData["criteria"],
-  hasCriteria: boolean,
-  includeCategory: boolean,
-): (string | number)[] {
-  const row: (string | number)[] = [];
-
-  row.push(p.rank !== null ? p.rank : "—");
-  if (includeCategory) row.push(p.categoryName ? truncate(p.categoryName, 20) : "—");
-  row.push(truncate(getTeamName(p), 30));
-  row.push(truncate(p.title, 40));
-  row.push(p.averageScore > 0 ? p.averageScore.toFixed(2) : "—");
-
-  if (hasCriteria) {
-    for (const judge of judges) {
-      const judgeScores = p.scores.filter((s) => s.judgeId === judge.id && s.criterionId !== null);
-      const scoreMap = new Map(judgeScores.map((s) => [s.criterionId!, s.score]));
-      const isComplete = scoreMap.size >= criteria.length;
-
-      if (isComplete) {
-        let ws = 0;
-        for (const c of criteria) ws += (scoreMap.get(c.id) ?? 0) * (c.weight / 100);
-        row.push(ws.toFixed(2));
-      } else {
-        row.push("—");
-      }
-
-      for (const c of criteria) {
-        const s = scoreMap.get(c.id);
-        row.push(s !== undefined ? s.toString() : "—");
-      }
-    }
-
-    for (const c of criteria) {
-      const vals = p.scores.filter((s) => s.criterionId === c.id).map((s) => s.score);
-      row.push(vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : "—");
-    }
-  } else {
-    for (const judge of judges) {
-      const flat = p.scores.find((s) => s.judgeId === judge.id && s.criterionId === null);
-      row.push(flat !== undefined ? flat.score.toFixed(1) : "—");
-    }
-  }
-
-  return row;
+function safeFileName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
@@ -93,70 +48,161 @@ async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
 
   const hasCriteria = data.criteria.length > 0;
   const hasCategories = data.categories.length > 0;
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const exportDate = new Date().toLocaleString();
+  // Fixed column widths in mm
+  const rankW = 8;
+  const teamW = 30;
+  const projectW = 38;
+  const overallW = 14;
+  const judgeFinalW = 13;
+  const criterionW = 10;
+  const avgW = 11;
 
-  doc.setFontSize(15);
-  doc.setTextColor(30, 30, 30);
-  doc.text(`${hackathonName} — Judging Results`, 14, 14);
+  const fixedW = rankW + teamW + projectW + overallW;
+  const judgesW = data.judges.length * (judgeFinalW + data.criteria.length * criterionW);
+  const avgsW = hasCriteria ? data.criteria.length * avgW : 0;
+  const totalW = fixedW + judgesW + avgsW;
 
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Exported: ${exportDate}`, 14, 20);
+  const marginH = 14;
+  const a4Usable = 297 - marginH * 2;
+  const a3Usable = 420 - marginH * 2;
 
-  if (data.participations.length === 0) {
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text("No submissions found.", 14, 32);
-    doc.save(`${safeFileName(hackathonName)}-judging-results.pdf`);
-    return;
+  let pageFormat: string | number[] = "a4";
+  if (totalW > a4Usable) {
+    pageFormat = totalW > a3Usable ? [totalW + marginH * 2 + 8, 210] : "a3";
   }
 
-  // Build column headers
-  const fixedHeaders = hasCategories
-    ? ["Rank", "Category", "Team", "Project / Application", "Overall Score"]
-    : ["Rank", "Team", "Project / Application", "Overall Score"];
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: pageFormat });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const fontSize = pageFormat === "a4" ? 7 : 6.5;
+  const exportDate = new Date().toLocaleString();
 
-  const judgeHeaders: string[] = [];
+  const drawFooter = (pageNum: number) => {
+    const total = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
+    doc.setFontSize(6.5);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `${hackathonName} — Judging Results  |  Page ${pageNum} of ${total}`,
+      pageWidth / 2,
+      pageHeight - 5,
+      { align: "center" },
+    );
+  };
+
+  // Column styles — indexed by column position
+  const colStyles: Record<number, object> = {};
+  let ci = 0;
+  colStyles[ci++] = { cellWidth: rankW, halign: "center" };
+  colStyles[ci++] = { cellWidth: teamW };
+  colStyles[ci++] = { cellWidth: projectW };
+  colStyles[ci++] = { cellWidth: overallW, halign: "center" };
+  for (let j = 0; j < data.judges.length; j++) {
+    colStyles[ci++] = { cellWidth: judgeFinalW, halign: "center" };
+    for (let k = 0; k < data.criteria.length; k++) {
+      colStyles[ci++] = { cellWidth: criterionW, halign: "center" };
+    }
+  }
   if (hasCriteria) {
+    for (let k = 0; k < data.criteria.length; k++) {
+      colStyles[ci++] = { cellWidth: avgW, halign: "center" };
+    }
+  }
+
+  type HeadCell = string | { content: string; rowSpan?: number; colSpan?: number; styles?: object };
+
+  const buildHead = (): HeadCell[][] => {
+    if (!hasCriteria) {
+      return [[
+        "Rank", "Team", "Project / Application", "Overall",
+        ...data.judges.map(j => truncate(j.name, 20)),
+      ]];
+    }
+
+    const row1: HeadCell[] = [
+      { content: "Rank", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
+      { content: "Team", rowSpan: 2, styles: { valign: "middle" } },
+      { content: "Project / Application", rowSpan: 2, styles: { valign: "middle" } },
+      { content: "Overall", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
+    ];
     for (const judge of data.judges) {
-      const jName = truncate(judge.name, 18);
-      judgeHeaders.push(`${jName}\nFinal`);
+      row1.push({
+        content: truncate(judge.name, 24),
+        colSpan: 1 + data.criteria.length,
+        styles: { halign: "center" },
+      });
+    }
+    row1.push({
+      content: "Averages",
+      colSpan: data.criteria.length,
+      styles: { halign: "center" },
+    });
+
+    const row2: HeadCell[] = [];
+    for (let j = 0; j < data.judges.length; j++) {
+      row2.push({ content: "Final", styles: { halign: "center" } });
       for (const c of data.criteria) {
-        judgeHeaders.push(`${jName}\n${truncate(c.name, 14)} (${c.weight}%)`);
+        row2.push({
+          content: truncate(c.name, 9) + "\n" + c.weight + "%",
+          styles: { halign: "center" },
+        });
       }
     }
     for (const c of data.criteria) {
-      judgeHeaders.push(`Avg\n${truncate(c.name, 14)}`);
+      row2.push({ content: truncate(c.name, 9), styles: { halign: "center" } });
     }
-  } else {
-    for (const judge of data.judges) {
-      judgeHeaders.push(truncate(judge.name, 18));
-    }
-  }
 
-  const headers = [...fixedHeaders, ...judgeHeaders];
+    return [row1, row2];
+  };
 
-  // Column widths
-  const fixedColWidths = hasCategories ? [10, 22, 34, 48, 18] : [10, 38, 52, 18];
-  const totalCols = headers.length;
-  const remainingWidth = pageWidth - 28 - fixedColWidths.reduce((a, b) => a + b, 0);
-  const dynamicCols = totalCols - fixedColWidths.length;
-  const dynWidth = dynamicCols > 0 ? Math.max(10, remainingWidth / dynamicCols) : 14;
+  const buildRows = (items: Participation[]) =>
+    items.map((p) => {
+      const row: (string | number)[] = [];
+      row.push(p.rank !== null ? p.rank : "—");
+      row.push(truncate(getTeamName(p), 28));
+      row.push(truncate(p.title, 36));
+      row.push(p.averageScore > 0 ? p.averageScore.toFixed(2) : "—");
 
-  const columnStyles: Record<number, { cellWidth: number }> = {};
-  fixedColWidths.forEach((w, i) => { columnStyles[i] = { cellWidth: w }; });
-  for (let i = fixedColWidths.length; i < totalCols; i++) {
-    columnStyles[i] = { cellWidth: dynWidth };
-  }
+      if (hasCriteria) {
+        for (const judge of data.judges) {
+          const js = p.scores.filter((s) => s.judgeId === judge.id && s.criterionId !== null);
+          const sm = new Map(js.map((s) => [s.criterionId!, s.score]));
+          const complete = sm.size >= data.criteria.length;
+          if (complete) {
+            let ws = 0;
+            for (const c of data.criteria) ws += (sm.get(c.id) ?? 0) * (c.weight / 100);
+            row.push(ws.toFixed(2));
+          } else {
+            row.push("—");
+          }
+          for (const c of data.criteria) {
+            const s = sm.get(c.id);
+            row.push(s !== undefined ? s : "—");
+          }
+        }
+        for (const c of data.criteria) {
+          const vals = p.scores.filter((s) => s.criterionId === c.id).map((s) => s.score);
+          row.push(
+            vals.length > 0
+              ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+              : "—",
+          );
+        }
+      } else {
+        for (const judge of data.judges) {
+          const flat = p.scores.find(
+            (s) => s.judgeId === judge.id && s.criterionId === null,
+          );
+          row.push(flat !== undefined ? flat.score.toFixed(1) : "—");
+        }
+      }
+      return row;
+    });
 
-  const tableOptions = {
-    head: [headers],
+  const commonOpts = {
     styles: {
-      fontSize: 7,
-      cellPadding: 1.8,
+      fontSize,
+      cellPadding: 1.5,
       overflow: "linebreak" as const,
       valign: "middle" as const,
       lineColor: [210, 210, 210] as [number, number, number],
@@ -165,38 +211,44 @@ async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
     headStyles: {
       fillColor: [25, 25, 35] as [number, number, number],
       textColor: [220, 220, 220] as [number, number, number],
-      fontSize: 7,
+      fontSize,
       fontStyle: "bold" as const,
-      halign: "center" as const,
-      valign: "middle" as const,
-      cellPadding: 2,
+      cellPadding: 1.8,
     },
     alternateRowStyles: { fillColor: [248, 248, 250] as [number, number, number] },
     bodyStyles: { textColor: [40, 40, 40] as [number, number, number] },
-    columnStyles,
-    margin: { top: 12, left: 14, right: 14 },
-    didDrawPage: (hookData: { pageNumber: number }) => {
-      const pageCount = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
-      doc.setFontSize(7);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        `${hackathonName} — Judging Results  |  Page ${hookData.pageNumber} of ${pageCount}`,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 5,
-        { align: "center" },
-      );
-    },
+    columnStyles: colStyles,
+    margin: { top: 12, left: marginH, right: marginH },
+    didDrawPage: (hookData: { pageNumber: number }) => drawFooter(hookData.pageNumber),
   };
 
+  // Title
+  doc.setFontSize(14);
+  doc.setTextColor(30, 30, 30);
+  doc.text(`${hackathonName} — Judging Results`, marginH, 13);
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Exported: ${exportDate}`, marginH, 19);
+
+  if (data.participations.length === 0) {
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text("No submissions found.", marginH, 30);
+    doc.save(`${safeFileName(hackathonName)}-judging-results.pdf`);
+    return;
+  }
+
+  const head = buildHead();
+
   if (hasCategories) {
-    // Separate table section per category
-    let startY = 25;
+    let curY = 24;
 
-    const groups: { label: string; items: Participation[] }[] = data.categories.map((cat) => ({
-      label: cat.name,
-      items: data.participations.filter((p) => p.categoryId === cat.id),
-    }));
-
+    const groups: { label: string; items: Participation[] }[] = [
+      ...data.categories.map((cat) => ({
+        label: cat.name,
+        items: data.participations.filter((p) => p.categoryId === cat.id),
+      })),
+    ];
     const uncategorized = data.participations.filter((p) => !p.categoryId);
     if (uncategorized.length > 0) {
       groups.push({ label: "Uncategorized", items: uncategorized });
@@ -205,58 +257,36 @@ async function buildAndDownloadPDF(data: ExportData, hackathonName: string) {
     for (const group of groups) {
       if (group.items.length === 0) continue;
 
-      // Category section heading
       doc.setFontSize(9);
-      doc.setTextColor(40, 40, 40);
       doc.setFont("helvetica", "bold");
-      doc.text(group.label, 14, startY + 3);
+      doc.setTextColor(40, 40, 40);
+      doc.text(group.label, marginH, curY + 4);
       doc.setFont("helvetica", "normal");
 
-      // Per-section table: no Category column (already split by category heading)
-      const sectionFixedHeaders = ["Rank", "Team", "Project / Application", "Overall Score"];
-      const sectionHeaders = [...sectionFixedHeaders, ...judgeHeaders];
-      const sectionFixedWidths = [10, 38, 52, 18];
-      const sectionRemaining = pageWidth - 28 - sectionFixedWidths.reduce((a, b) => a + b, 0);
-      const sectionDynWidth = dynamicCols > 0 ? Math.max(10, sectionRemaining / dynamicCols) : 14;
-      const sectionColStyles: Record<number, { cellWidth: number }> = {};
-      sectionFixedWidths.forEach((w, i) => { sectionColStyles[i] = { cellWidth: w }; });
-      for (let i = sectionFixedWidths.length; i < sectionHeaders.length; i++) {
-        sectionColStyles[i] = { cellWidth: sectionDynWidth };
-      }
-
-      // Build rows without the category column
-      const sectionRows = group.items.map((p) =>
-        buildRow(p, data.judges, data.criteria, hasCriteria, false),
-      );
-
       autoTable(doc, {
-        ...tableOptions,
-        head: [sectionHeaders],
-        body: sectionRows,
-        startY: startY + 6,
-        columnStyles: sectionColStyles,
+        ...commonOpts,
+        head,
+        body: buildRows(group.items),
+        startY: curY + 8,
       });
 
-      startY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
-
-      if (startY > doc.internal.pageSize.getHeight() - 30) {
+      curY =
+        (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+      if (curY > pageHeight - 30) {
         doc.addPage();
-        startY = 14;
+        curY = 14;
       }
     }
   } else {
-    // Single flat table
-    const rows = data.participations.map((p) =>
-      buildRow(p, data.judges, data.criteria, hasCriteria, false),
-    );
-    autoTable(doc, { ...tableOptions, body: rows, startY: 25 });
+    autoTable(doc, {
+      ...commonOpts,
+      head,
+      body: buildRows(data.participations),
+      startY: 24,
+    });
   }
 
   doc.save(`${safeFileName(hackathonName)}-judging-results.pdf`);
-}
-
-function safeFileName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 export default function DownloadResultsPDF({ hackathonId, hackathonName }: Props) {
