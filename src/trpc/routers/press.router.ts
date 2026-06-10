@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure, organizerProcedure } from "..";
-import { search, fetchRSSFeed, searchWordPressSite, normalizeUrl, isSearchConfigured } from "@/lib/search";
+import { search, fetchRSSFeed, normalizeUrl, isSearchConfigured } from "@/lib/search";
 import { scoreArticle, generateQueries } from "@/lib/pressScoring";
 import { pressSources, searchQueries } from "@/lib/pressSources";
 
@@ -101,18 +101,25 @@ export const pressRouter = createTRPCRouter({
       processResults(results);
     }
 
-    // --- WordPress site search (finds historical articles) ---
+    // --- WordPress RSS search (targeted by query, avoids HTML scraping) ---
     const allQueries = [
       ...searchQueries,
       ...hackathonNames.slice(0, 3).map((n) => `${n} hackathon`),
     ];
-    const wpSources = pressSources.filter((s) => s.wordpressBase);
+    const searchableSources = pressSources.filter((s) => s.searchRssBase);
     for (const query of allQueries) {
-      const wpFetches = wpSources.map((s) =>
-        searchWordPressSite(s.wordpressBase!, s.name, query),
+      const searchFetches = searchableSources.map((s) =>
+        fetchRSSFeed(
+          {
+            name: s.name,
+            rssUrl: `${s.searchRssBase!.replace(/\/$/, "")}/?s=${encodeURIComponent(query)}&feed=rss2`,
+            alwaysInclude: true,
+          },
+          filterKeywords,
+        ),
       );
-      const wpResponses = await Promise.all(wpFetches);
-      for (const { results, error } of wpResponses) {
+      const searchResponses = await Promise.all(searchFetches);
+      for (const { results, error } of searchResponses) {
         if (error) sourceErrors.push(error);
         rawResultCount += results.length;
         processResults(results);
