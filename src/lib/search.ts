@@ -110,14 +110,15 @@ export async function fetchRSSFeed(
 ): Promise<{ results: SearchResult[]; error?: string }> {
   const rssUrl = source.rssUrl;
   if (!rssUrl) return { results: [] };
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(rssUrl, {
-      signal: controller.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; HackcontrolBot/1.0)" },
-    });
-    clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    let res: Response;
+    try {
+      res = await fetch(rssUrl, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) {
       return { results: [], error: `${source.name}: HTTP ${res.status}` };
     }
@@ -128,7 +129,6 @@ export async function fetchRSSFeed(
       : items.filter((r) => passesKeywordFilter(r, filterKeywords));
     return { results: filtered };
   } catch (err) {
-    clearTimeout(timer);
     return {
       results: [],
       error: `${source.name}: ${err instanceof Error ? err.message : String(err)}`,

@@ -94,7 +94,7 @@ export const pressRouter = createTRPCRouter({
     const rssFetches = pressSources
       .filter((s) => s.rssUrl)
       .map((s) => fetchRSSFeed(s, filterKeywords));
-    const rssResponses = await Promise.all(rssFetches);
+    const rssResponses = await Promise.all(rssFetches).catch(() => []);
     for (const { results, error } of rssResponses) {
       if (error) sourceErrors.push(error);
       rawResultCount += results.length;
@@ -118,7 +118,7 @@ export const pressRouter = createTRPCRouter({
           filterKeywords,
         ),
       );
-      const searchResponses = await Promise.all(searchFetches);
+      const searchResponses = await Promise.all(searchFetches).catch(() => []);
       for (const { results, error } of searchResponses) {
         if (error) sourceErrors.push(error);
         rawResultCount += results.length;
