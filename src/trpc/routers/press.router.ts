@@ -53,7 +53,7 @@ export const pressRouter = createTRPCRouter({
       ...hackathonNames,
     ];
 
-    const existing = await ctx.prisma.pressArticle.findMany({ select: { url: true } });
+    const existing = await ctx.prisma.pressArticle.findMany({ select: { url: true } }).catch(() => [] as { url: string }[]);
     const seenUrls = new Set(existing.map((e) => normalizeUrl(e.url)));
 
     const toCreate: ArticleCandidate[] = [];
