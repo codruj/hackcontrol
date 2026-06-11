@@ -113,6 +113,7 @@ export const pressRouter = createTRPCRouter({
           {
             name: s.name,
             rssUrl: `${s.searchRssBase!.replace(/\/$/, "")}/?s=${encodeURIComponent(query)}&feed=rss2`,
+            skipSslVerify: s.skipSslVerify,
             alwaysInclude: true,
           },
           filterKeywords,

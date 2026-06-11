@@ -1,3 +1,4 @@
+import { request as httpsRequest, Agent as HttpsAgent } from "node:https";
 import type { PressSource } from "./pressSources";
 
 export interface SearchResult {
@@ -103,6 +104,59 @@ function passesKeywordFilter(result: SearchResult, keywords: string[]): boolean 
   return keywords.some((kw) => text.includes(normalizeText(kw)));
 }
 
+function fetchInsecure(url: string, timeoutMs: number): Promise<{ body: string; status: number }> {
+  return new Promise((resolve, reject) => {
+    const agent = new HttpsAgent({ rejectUnauthorized: false });
+    const timer = setTimeout(() => reject(new Error("Request timed out")), timeoutMs);
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      clearTimeout(timer);
+      reject(new Error(`Invalid URL: ${url}`));
+      return;
+    }
+
+    const req = httpsRequest(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port || 443,
+        path: parsed.pathname + parsed.search,
+        method: "GET",
+        agent,
+        headers: { Accept: "text/xml,application/xml,application/rss+xml,text/html,*/*" },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          clearTimeout(timer);
+          resolve({ body: Buffer.concat(chunks).toString("utf-8"), status: res.statusCode ?? 0 });
+        });
+      },
+    );
+
+    req.on("error", (err: Error) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+
+    req.end();
+  });
+}
+
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<{ body: string; status: number }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    const body = await res.text();
+    return { body, status: res.status };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function fetchRSSFeed(
   source: PressSource,
@@ -111,19 +165,15 @@ export async function fetchRSSFeed(
   const rssUrl = source.rssUrl;
   if (!rssUrl) return { results: [] };
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    let res: Response;
-    try {
-      res = await fetch(rssUrl, { signal: controller.signal });
-    } finally {
-      clearTimeout(timer);
+    const { body, status } = source.skipSslVerify
+      ? await fetchInsecure(rssUrl, 10000)
+      : await fetchWithTimeout(rssUrl, 10000);
+
+    if (status < 200 || status >= 300) {
+      return { results: [], error: `${source.name}: HTTP ${status}` };
     }
-    if (!res.ok) {
-      return { results: [], error: `${source.name}: HTTP ${res.status}` };
-    }
-    const xml = await res.text();
-    const items = parseRSSXML(xml, source.name);
+
+    const items = parseRSSXML(body, source.name);
     const filtered = source.alwaysInclude
       ? items
       : items.filter((r) => passesKeywordFilter(r, filterKeywords));
@@ -143,14 +193,14 @@ async function searchNewsApi(query: string, apiKey: string): Promise<SearchResul
     pageSize: "10",
     apiKey,
   });
-  const res = await fetch(`https://newsapi.org/v2/everything?${params}`, {
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => res.statusText);
-    throw new Error(`NewsAPI ${res.status}: ${body}`);
+  const { body, status } = await fetchWithTimeout(
+    `https://newsapi.org/v2/everything?${params}`,
+    10000,
+  );
+  if (status < 200 || status >= 300) {
+    throw new Error(`NewsAPI ${status}: ${body.slice(0, 200)}`);
   }
-  const data = await res.json() as {
+  const data = JSON.parse(body) as {
     articles?: {
       title?: string;
       url?: string;
@@ -161,26 +211,29 @@ async function searchNewsApi(query: string, apiKey: string): Promise<SearchResul
   };
   return (data.articles ?? [])
     .filter((a) => a.url && a.title && !a.title.startsWith("[Removed]"))
-    .map((a) => ({
-      title: a.title!,
-      url: a.url!,
-      source: a.source?.name ?? new URL(a.url!).hostname,
-      snippet: a.description ?? undefined,
-      publishedAt: a.publishedAt,
-    }));
+    .map((a) => {
+      let hostname = "";
+      try { hostname = new URL(a.url!).hostname; } catch { /* ignore */ }
+      return {
+        title: a.title!,
+        url: a.url!,
+        source: a.source?.name ?? hostname,
+        snippet: a.description ?? undefined,
+        publishedAt: a.publishedAt,
+      };
+    });
 }
 
 async function searchGoogleCSE(query: string, key: string, cx: string): Promise<SearchResult[]> {
   const params = new URLSearchParams({ key, cx, q: query, num: "10", hl: "ro" });
-  const res = await fetch(
+  const { body, status } = await fetchWithTimeout(
     `https://www.googleapis.com/customsearch/v1?${params}`,
-    { signal: AbortSignal.timeout(10000) },
+    10000,
   );
-  if (!res.ok) {
-    const body = await res.text().catch(() => res.statusText);
-    throw new Error(`Google CSE ${res.status}: ${body}`);
+  if (status < 200 || status >= 300) {
+    throw new Error(`Google CSE ${status}: ${body.slice(0, 200)}`);
   }
-  const data = await res.json() as {
+  const data = JSON.parse(body) as {
     items?: {
       title?: string;
       link?: string;
@@ -191,13 +244,17 @@ async function searchGoogleCSE(query: string, key: string, cx: string): Promise<
   };
   return (data.items ?? [])
     .filter((item) => item.link && item.title)
-    .map((item) => ({
-      title: item.title!,
-      url: item.link!,
-      source: item.displayLink ?? new URL(item.link!).hostname,
-      snippet: item.snippet,
-      publishedAt: item.pagemap?.metatags?.[0]?.["article:published_time"],
-    }));
+    .map((item) => {
+      let hostname = "";
+      try { hostname = new URL(item.link!).hostname; } catch { /* ignore */ }
+      return {
+        title: item.title!,
+        url: item.link!,
+        source: item.displayLink ?? hostname,
+        snippet: item.snippet,
+        publishedAt: item.pagemap?.metatags?.[0]?.["article:published_time"],
+      };
+    });
 }
 
 export async function search(query: string): Promise<SearchResult[]> {

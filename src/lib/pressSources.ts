@@ -2,6 +2,7 @@ export interface PressSource {
   name: string;
   rssUrl?: string;
   searchRssBase?: string;
+  skipSslVerify?: boolean;
   alwaysInclude?: boolean;
 }
 
@@ -11,12 +12,14 @@ export const pressSources: PressSource[] = [
     name: "UTCN",
     rssUrl: "https://www.utcluj.ro/feed/",
     searchRssBase: "https://www.utcluj.ro",
+    skipSslVerify: true,
     alwaysInclude: true,
   },
   {
     name: "AIRI UTCN",
     rssUrl: "https://airi.utcluj.ro/feed/",
     searchRssBase: "https://airi.utcluj.ro",
+    skipSslVerify: true,
     alwaysInclude: true,
   },
 
