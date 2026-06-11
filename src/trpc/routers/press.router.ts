@@ -17,7 +17,7 @@ type ArticleCandidate = {
 };
 
 export const pressRouter = createTRPCRouter({
-  discoverArticles: organizerProcedure.mutation(async ({ ctx }) => {
+  discoverArticles: organizerProcedure.mutation(async ({ ctx }) => { try {
     const hackathons = await ctx.prisma.hackathon.findMany({
       select: {
         id: true,
@@ -197,6 +197,16 @@ export const pressRouter = createTRPCRouter({
       sourceErrors: sourceErrors.slice(0, 5).map((e) => e.slice(0, 120)),
       apiError: apiError ? apiError.slice(0, 200) : null,
     };
+  } catch (err) {
+    return {
+      sourcesChecked: 0,
+      rawResults: 0,
+      candidates: 0,
+      saved: 0,
+      sourceErrors: [],
+      apiError: err instanceof Error ? err.message : String(err),
+    };
+  }
   }),
 
   listArticles: organizerProcedure

@@ -8,12 +8,7 @@ import { appRouter } from "@/trpc/root";
 export default createNextApiHandler({
   router: appRouter,
   createContext: createTRPCContext,
-  onError:
-    env.NODE_ENV === "development"
-      ? ({ path, error }) => {
-          console.error(
-            `❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`,
-          );
-        }
-      : undefined,
+  onError: ({ path, error }) => {
+    console.error(`tRPC error on ${path ?? "<no-path>"}: ${error.message}\n${error.stack ?? ""}`);
+  },
 });
