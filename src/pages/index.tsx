@@ -152,7 +152,7 @@ export default function Home() {
   const { data: recentHackathons, isLoading } = api.hackathon.getRecentHackathons.useQuery();
   const { data: sponsors = [] } = api.sponsor.getPublicSponsors.useQuery();
   const { data: allPhotos = [] } = api.gallery.getAllPhotos.useQuery();
-  const { data: pressPreview = [] } = api.press.getApprovedPublic.useQuery({ limit: 4 });
+  const { data: pressPreview = [] } = api.press.getApprovedPublic.useQuery({ limit: 6 });
 
   const previewPhotos = allPhotos.slice(0, 4);
 
