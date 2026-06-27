@@ -3,6 +3,7 @@ export interface ScoringContext {
   sponsorNames: string[];
   mentorCompanies: string[];
   judgeCompanies: string[];
+  customKeywords: string[];
 }
 
 export interface ScoringResult {
@@ -110,11 +111,23 @@ export function scoreArticle(
     innovHits.forEach((t) => matched.add(t));
   }
 
+  for (const kw of context.customKeywords) {
+    if (kw.length > 1 && normalize(fullText).includes(normalize(kw))) {
+      score += normalize(article.title).includes(normalize(kw)) ? 20 : 10;
+      matched.add(kw);
+    }
+  }
+
+  const customHit = context.customKeywords.some(
+    (kw) => kw.length > 1 && normalize(fullText).includes(normalize(kw)),
+  );
+
   const hasContext =
     utcnHits.length > 0 ||
     airiHits.length > 0 ||
     hackHits.length > 0 ||
-    relatedHackathonName !== undefined;
+    relatedHackathonName !== undefined ||
+    customHit;
 
   if (!hasContext) score = Math.max(0, score - 20);
 
@@ -128,6 +141,7 @@ export function scoreArticle(
 export function generateQueries(
   hackathonNames: string[],
   sponsorNames: string[],
+  customKeywords: string[] = [],
 ): string[] {
   const queries: string[] = [
     "UTCN hackathon",
@@ -151,5 +165,12 @@ export function generateQueries(
     }
   }
 
-  return Array.from(new Set(queries)).slice(0, 15);
+  for (const kw of customKeywords.slice(0, 5)) {
+    if (kw.length > 3) {
+      queries.push(`"${kw}" UTCN`);
+      queries.push(`"${kw}" hackathon`);
+    }
+  }
+
+  return Array.from(new Set(queries)).slice(0, 20);
 }

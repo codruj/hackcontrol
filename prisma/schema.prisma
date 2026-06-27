@@ -443,10 +443,19 @@ model PressArticle {
   matchedKeywords Json?
   relevanceScore  Float             @default(0)
   status          PressArticleStatus @default(PENDING)
+  isManual        Boolean           @default(false)
   discoveredAt    DateTime          @default(now())
   hackathon       Hackathon?        @relation(fields: [hackathonId], references: [id], onDelete: SetNull)
 
   @@map("press_articles")
+}
+
+model PressKeyword {
+  id        String   @id @default(cuid())
+  keyword   String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("press_keywords")
 }
 
 enum NotificationType {
