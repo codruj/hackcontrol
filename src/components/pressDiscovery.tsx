@@ -23,6 +23,9 @@ function ArticleCard({
   onApprove,
   onReject,
   updating,
+  hackathons,
+  onHackathonChange,
+  updatingHackathon,
 }: {
   article: {
     id: string;
@@ -34,11 +37,15 @@ function ArticleCard({
     relevanceScore: number;
     matchedKeywords: unknown;
     status: string;
+    hackathonId: string | null;
     hackathon: { name: string; url: string } | null;
   };
   onApprove?: () => void;
   onReject?: () => void;
   updating: boolean;
+  hackathons?: { id: string; name: string }[];
+  onHackathonChange?: (hackathonId: string | null) => void;
+  updatingHackathon?: boolean;
 }) {
   const keywords = Array.isArray(article.matchedKeywords)
     ? (article.matchedKeywords as string[])
@@ -89,6 +96,23 @@ function ArticleCard({
               {kw}
             </span>
           ))}
+        </div>
+      )}
+
+      {hackathons && hackathons.length > 0 && (
+        <div className="flex items-center gap-2">
+          <label className="shrink-0 text-xs text-neutral-500">Hackathon:</label>
+          <select
+            value={article.hackathonId ?? ""}
+            onChange={(e) => onHackathonChange?.(e.target.value || null)}
+            disabled={updatingHackathon}
+            className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-xs text-white focus:border-blue-700 focus:outline-none disabled:opacity-50"
+          >
+            <option value="">None</option>
+            {hackathons.map((h) => (
+              <option key={h.id} value={h.id}>{h.name}</option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -181,6 +205,14 @@ const PressDiscovery = () => {
       void refetchApproved();
     },
     onError: (e) => toast.error(e.message || "Failed to update"),
+  });
+
+  const updateHackathon = api.press.updateArticleHackathon.useMutation({
+    onSuccess: () => {
+      void refetchPending();
+      void refetchApproved();
+    },
+    onError: (e) => toast.error(e.message || "Failed to update hackathon"),
   });
 
   const addKeyword = api.press.addKeyword.useMutation({
@@ -349,6 +381,9 @@ const PressDiscovery = () => {
                     onApprove={() => handleApprove(a.id)}
                     onReject={() => handleReject(a.id)}
                     updating={updateStatus.isLoading}
+                    hackathons={hackathons}
+                    onHackathonChange={(hackathonId) => updateHackathon.mutate({ id: a.id, hackathonId })}
+                    updatingHackathon={updateHackathon.isLoading}
                   />
                 ))
               )}
@@ -369,6 +404,9 @@ const PressDiscovery = () => {
                     key={a.id}
                     article={a}
                     updating={false}
+                    hackathons={hackathons}
+                    onHackathonChange={(hackathonId) => updateHackathon.mutate({ id: a.id, hackathonId })}
+                    updatingHackathon={updateHackathon.isLoading}
                   />
                 ))
               )}

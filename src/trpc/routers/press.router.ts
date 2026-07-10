@@ -253,6 +253,22 @@ export const pressRouter = createTRPCRouter({
       });
     }),
 
+  updateArticleHackathon: organizerProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        hackathonId: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const article = await ctx.prisma.pressArticle.findUnique({ where: { id: input.id } });
+      if (!article) throw new TRPCError({ code: "NOT_FOUND" });
+      return ctx.prisma.pressArticle.update({
+        where: { id: input.id },
+        data: { hackathonId: input.hackathonId },
+      });
+    }),
+
   getApprovedPublic: publicProcedure
     .input(
       z.object({
