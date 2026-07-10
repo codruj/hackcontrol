@@ -388,9 +388,8 @@ export const mentorRouter = createTRPCRouter({
     .input(z.object({
       hackathonId: z.string(),
       mentorUserId: z.string().optional(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      startTime: z.string().regex(/^\d{2}:\d{2}$/),
-      endTime: z.string().regex(/^\d{2}:\d{2}$/),
+      startTime: z.date(),
+      endTime: z.date(),
       slotDurationMinutes: z.number().int().min(5).max(480),
       topic: z.string().max(200).optional(),
     }))
@@ -420,12 +419,9 @@ export const mentorRouter = createTRPCRouter({
         if (!mentor) throw new TRPCError({ code: "BAD_REQUEST", message: "No mentor profile found. Contact the organizer." });
       }
 
-      const intervalStart = new Date(`${input.date}T${input.startTime}:00`);
-      const intervalEnd = new Date(`${input.date}T${input.endTime}:00`);
+      const intervalStart = input.startTime;
+      const intervalEnd = input.endTime;
 
-      if (isNaN(intervalStart.getTime()) || isNaN(intervalEnd.getTime())) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid date or time" });
-      }
       if (intervalStart >= intervalEnd) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Start time must be before end time" });
       }
@@ -442,8 +438,10 @@ export const mentorRouter = createTRPCRouter({
         throw new TRPCError({ code: "BAD_REQUEST", message: "The interval is shorter than the selected slot duration" });
       }
 
-      const dayStart = new Date(`${input.date}T00:00:00`);
-      const dayEnd = new Date(`${input.date}T23:59:59`);
+      const dayStart = new Date(input.startTime);
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const dayEnd = new Date(input.startTime);
+      dayEnd.setUTCHours(23, 59, 59, 999);
       const existing = await ctx.prisma.mentorSlot.findMany({
         where: { mentorId: mentor.id, startTime: { gte: dayStart, lte: dayEnd } },
         select: { startTime: true, endTime: true },
