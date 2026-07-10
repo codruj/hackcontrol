@@ -222,11 +222,15 @@ export const pressRouter = createTRPCRouter({
       z.object({
         status: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
         limit: z.number().min(1).max(100).default(50),
+        hackathonId: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       return ctx.prisma.pressArticle.findMany({
-        where: input.status ? { status: input.status } : undefined,
+        where: {
+          ...(input.status ? { status: input.status } : {}),
+          ...(input.hackathonId ? { hackathonId: input.hackathonId } : {}),
+        },
         orderBy: [{ relevanceScore: "desc" }, { discoveredAt: "desc" }],
         take: input.limit,
         include: { hackathon: { select: { name: true, url: true } } },

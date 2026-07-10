@@ -134,6 +134,8 @@ const PressDiscovery = () => {
 
   const [newKeyword, setNewKeyword] = useState("");
 
+  const [filterHackathonId, setFilterHackathonId] = useState("");
+
   const [manualUrl, setManualUrl] = useState("");
   const [manualTitle, setManualTitle] = useState("");
   const [manualSource, setManualSource] = useState("");
@@ -143,10 +145,16 @@ const PressDiscovery = () => {
   const [manualTags, setManualTags] = useState("");
 
   const { data: pending = [], refetch: refetchPending, isLoading: loadingPending } =
-    api.press.listArticles.useQuery({ status: "PENDING" }, { enabled: open });
+    api.press.listArticles.useQuery(
+      { status: "PENDING", hackathonId: filterHackathonId || undefined },
+      { enabled: open },
+    );
 
   const { data: approved = [], refetch: refetchApproved, isLoading: loadingApproved } =
-    api.press.listArticles.useQuery({ status: "APPROVED" }, { enabled: open && tab === "approved" });
+    api.press.listArticles.useQuery(
+      { status: "APPROVED", hackathonId: filterHackathonId || undefined },
+      { enabled: open && tab === "approved" },
+    );
 
   const { data: keywords = [], refetch: refetchKeywords } =
     api.press.listKeywords.useQuery(undefined, { enabled: open });
@@ -281,6 +289,24 @@ const PressDiscovery = () => {
               </div>
             )}
           </div>
+
+          {hackathons.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="shrink-0 text-xs text-neutral-500">Filter by hackathon:</label>
+              <select
+                value={filterHackathonId}
+                onChange={(e) => setFilterHackathonId(e.target.value)}
+                className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-white focus:border-blue-700 focus:outline-none"
+              >
+                <option value="">All hackathons</option>
+                {hackathons.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex gap-1 border-b border-neutral-800 overflow-x-auto">
             {tabs.map(({ key, label, badge }) => (
