@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Modal, Button, Alert } from "@/ui";
 import { inputStyles } from "@/ui/input";
 import { Plus, Settings, Cancel } from "@/ui/icons";
-import Loading from "./loading";
 
 interface AnnouncementManagerProps {
   hackathonId: string;
@@ -22,11 +21,12 @@ interface AnnouncementFormData {
 const AnnouncementManager = ({ hackathonId, hackathonUrl }: AnnouncementManagerProps) => {
   const [editingAnnouncement, setEditingAnnouncement] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  // Fetch announcements
-  const { data: announcements, isLoading, refetch } = api.announcement.getByHackathonUrl.useQuery({
-    url: hackathonUrl,
-  });
+  const { data: announcements, isLoading, refetch } = api.announcement.getByHackathonUrl.useQuery(
+    { url: hackathonUrl },
+    { enabled: isExpanded },
+  );
 
   // Create announcement mutation
   const { mutate: createAnnouncement } = api.announcement.create.useMutation({
@@ -66,23 +66,32 @@ const AnnouncementManager = ({ hackathonId, hackathonUrl }: AnnouncementManagerP
     },
   });
 
-  if (isLoading) {
-    return <Loading text="Loading announcements..." />;
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Announcements</h3>
-        <CreateAnnouncementModal
-          hackathonId={hackathonId}
-          onCreate={createAnnouncement}
-          loading={loading}
-          setLoading={setLoading}
-        />
+        <div className="flex items-center gap-2">
+          {isExpanded && (
+            <CreateAnnouncementModal
+              hackathonId={hackathonId}
+              onCreate={createAnnouncement}
+              loading={loading}
+              setLoading={setLoading}
+            />
+          )}
+          <button
+            onClick={() => setIsExpanded((v) => !v)}
+            className="rounded-md border border-neutral-700 bg-neutral-800/30 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-neutral-800/60"
+          >
+            {isExpanded ? "Hide" : "Show"}
+          </button>
+        </div>
       </div>
 
-      {announcements && announcements.length > 0 ? (
+      {isExpanded && (
+        isLoading ? (
+          <p className="text-sm text-neutral-400">Loading announcements...</p>
+        ) : announcements && announcements.length > 0 ? (
         <div className="space-y-3">
           {announcements.map((announcement) => (
             <div
@@ -161,6 +170,7 @@ const AnnouncementManager = ({ hackathonId, hackathonUrl }: AnnouncementManagerP
             Create announcements to keep participants informed
           </p>
         </div>
+        )
       )}
     </div>
   );
