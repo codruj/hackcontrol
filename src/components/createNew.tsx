@@ -1,7 +1,7 @@
 import { api } from "@/trpc/api";
 import { useState } from "react";
 import type { THackathon } from "@/types/hackathon.type";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { nanoid } from "nanoid";
 import { useSession } from "next-auth/react";
@@ -30,31 +30,27 @@ const CreateNew = () => {
   }
 
   const { mutate } = api.hackathon.createHackathon.useMutation({
-    onSuccess: () => {
-      router.push(`/app/${url}`);
-      setLoading(false);
+    onSuccess: (data) => {
+      toast.success("Hackathon created successfully");
       confetti({
         spread: 100,
       });
+      setLoading(false);
+      void router.push(`/app/${data.url}`);
     },
     onError: () => {
       setLoading(false);
+      toast.error("Something went wrong");
     },
   });
 
-  const onSubmit: SubmitHandler<THackathon> = (data) => {
-    try {
-      setLoading(true);
-      mutate({
-        ...data,
-        url,
-        is_finished: false,
-      });
-      toast.success("Hackathon created successfully");
-    } catch (err) {
-      setLoading(false);
-      toast.error("Something went wrong");
-    }
+  const onSubmit: SubmitHandler<THackathon> = (formData) => {
+    setLoading(true);
+    mutate({
+      ...formData,
+      url,
+      is_finished: false,
+    });
   };
 
   return (
