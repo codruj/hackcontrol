@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure, organizerProcedure } from "..";
+import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, publicProcedure, organizerProcedure, adminProcedure } from "..";
 
 function betterName(a: string, b: string): string {
   const score = (s: string) => {
@@ -69,4 +70,16 @@ export const sponsorRouter = createTRPCRouter({
       orderBy: { createdAt: "desc" },
     });
   }),
+
+  deleteSponsorRegistration: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const registration = await ctx.prisma.sponsorRegistration.findUnique({
+        where: { id: input.id },
+      });
+      if (!registration) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Sponsor registration not found" });
+      }
+      return ctx.prisma.sponsorRegistration.delete({ where: { id: input.id } });
+    }),
 });

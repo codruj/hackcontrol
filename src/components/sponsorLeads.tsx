@@ -1,10 +1,22 @@
 import { useState } from "react";
 import { api } from "@/trpc/api";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 const SponsorLeads = () => {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [open, setOpen] = useState(false);
-  const { data, isLoading } = api.sponsor.getSponsorRegistrations.useQuery(undefined, {
+  const { data, isLoading, refetch } = api.sponsor.getSponsorRegistrations.useQuery(undefined, {
     enabled: open,
+  });
+
+  const deleteMutation = api.sponsor.deleteSponsorRegistration.useMutation({
+    onSuccess: () => {
+      void refetch();
+      toast.success("Sponsor registration deleted");
+    },
+    onError: (e) => toast.error(e.message || "Failed to delete"),
   });
 
   return (
@@ -44,13 +56,28 @@ const SponsorLeads = () => {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <span className="font-medium text-white">{reg.companyName}</span>
-                    <span className="shrink-0 text-xs text-neutral-500">
-                      {new Date(reg.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="text-xs text-neutral-500">
+                        {new Date(reg.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            if (confirm("Delete this sponsor registration?")) {
+                              deleteMutation.mutate({ id: reg.id });
+                            }
+                          }}
+                          disabled={deleteMutation.isLoading}
+                          className="text-xs text-red-500 hover:text-red-400 disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-neutral-400">{reg.contact}</p>
                   <p className="text-sm text-gray-300 whitespace-pre-wrap">{reg.description}</p>
