@@ -429,7 +429,7 @@ export const scoringRouter = createTRPCRouter({
         }),
         ctx.prisma.judge.findMany({
           where: { hackathonId: hackathon.id },
-          include: { user: { select: { name: true, username: true } } },
+          include: { user: { select: { name: true, username: true } }, judgeCategories: true },
           orderBy: { createdAt: "asc" },
         }),
         ctx.prisma.participation.findMany({
@@ -442,11 +442,22 @@ export const scoringRouter = createTRPCRouter({
         }),
       ]);
 
-      const judgeCount = judges.length;
-      const effectiveMinJudges = Math.min(
-        hackathon.min_judges_required,
-        Math.max(1, judgeCount),
-      );
+      const unrestrictedJudgeCount = judges.filter((j) => j.judgeCategories.length === 0).length;
+      const restrictedJudgeCountByCategory = new Map<string, number>();
+      for (const judge of judges) {
+        for (const jc of judge.judgeCategories) {
+          restrictedJudgeCountByCategory.set(
+            jc.categoryId,
+            (restrictedJudgeCountByCategory.get(jc.categoryId) ?? 0) + 1,
+          );
+        }
+      }
+
+      const effectiveMinJudgesFor = (categoryId: string | null) => {
+        const eligibleJudges =
+          unrestrictedJudgeCount + (categoryId ? restrictedJudgeCountByCategory.get(categoryId) ?? 0 : 0);
+        return Math.min(hackathon.min_judges_required, Math.max(1, eligibleJudges));
+      };
 
       const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
 
@@ -473,7 +484,7 @@ export const scoringRouter = createTRPCRouter({
           })),
           averageScore,
           completeJudges,
-          isEligible: completeJudges >= effectiveMinJudges,
+          isEligible: completeJudges >= effectiveMinJudgesFor(p.categoryId ?? null),
         };
       });
 

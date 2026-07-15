@@ -214,7 +214,7 @@ export const hackathonRouter = createTRPCRouter({
       }
 
       // Get all participations with their scores and criteria for correct weighted ranking
-      const [participations, criteria, judgeCount] = await Promise.all([
+      const [participations, criteria, judges] = await Promise.all([
         ctx.prisma.participation.findMany({
           where: { hackathon_url: input.url },
           include: { scores: true },
@@ -223,17 +223,30 @@ export const hackathonRouter = createTRPCRouter({
           where: { hackathonId: hackathon.id },
           orderBy: { order: "asc" },
         }),
-        ctx.prisma.judge.count({ where: { hackathonId: hackathon.id } }),
+        ctx.prisma.judge.findMany({
+          where: { hackathonId: hackathon.id },
+          select: { judgeCategories: { select: { categoryId: true } } },
+        }),
       ]);
 
-      // Use the actual judge count as a ceiling so a single-judge hackathon
-      // doesn't require the default min of 2.
-      const effectiveMinJudges = Math.min(
-        hackathon.min_judges_required,
-        Math.max(1, judgeCount),
-      );
+      const unrestrictedJudgeCount = judges.filter((j) => j.judgeCategories.length === 0).length;
+      const restrictedJudgeCountByCategory = new Map<string, number>();
+      for (const judge of judges) {
+        for (const jc of judge.judgeCategories) {
+          restrictedJudgeCountByCategory.set(
+            jc.categoryId,
+            (restrictedJudgeCountByCategory.get(jc.categoryId) ?? 0) + 1,
+          );
+        }
+      }
 
-      const rankSubset = (subset: typeof participations, limit: number) =>
+      const effectiveMinJudgesFor = (categoryId: string | null) => {
+        const eligibleJudges =
+          unrestrictedJudgeCount + (categoryId ? restrictedJudgeCountByCategory.get(categoryId) ?? 0 : 0);
+        return Math.min(hackathon.min_judges_required, Math.max(1, eligibleJudges));
+      };
+
+      const rankSubset = (subset: typeof participations, limit: number, categoryId: string | null) =>
         subset
           .map((participation) => {
             const { averageScore, completeJudges } = computeWeightedScore(
@@ -252,7 +265,7 @@ export const hackathonRouter = createTRPCRouter({
               creatorName: participation.creatorName,
               averageScore,
               totalScores: completeJudges,
-              isEligibleForRanking: completeJudges >= effectiveMinJudges,
+              isEligibleForRanking: completeJudges >= effectiveMinJudgesFor(categoryId),
             };
           })
           .filter((p) => p.isEligibleForRanking)
@@ -273,6 +286,7 @@ export const hackathonRouter = createTRPCRouter({
           winners: rankSubset(
             participations.filter((p) => p.categoryId === category.id),
             category.max_winners_displayed ?? hackathonLimit,
+            category.id,
           ),
         }));
 
@@ -285,7 +299,7 @@ export const hackathonRouter = createTRPCRouter({
 
       return {
         hackathon,
-        winners: rankSubset(participations, hackathonLimit),
+        winners: rankSubset(participations, hackathonLimit, null),
         categoryWinners: [],
       };
     }),
@@ -755,7 +769,7 @@ export const hackathonRouter = createTRPCRouter({
       }
 
       // Get all participations with their scores to determine winners
-      const [participations, criteria, hackathonCategories, judgeCount] = await Promise.all([
+      const [participations, criteria, hackathonCategories, judges] = await Promise.all([
         ctx.prisma.participation.findMany({
           where: { hackathon_url: hackathon.url },
           include: { scores: true },
@@ -767,15 +781,30 @@ export const hackathonRouter = createTRPCRouter({
         ctx.prisma.hackathonCategory.findMany({
           where: { hackathonId: hackathon.id },
         }),
-        ctx.prisma.judge.count({ where: { hackathonId: hackathon.id } }),
+        ctx.prisma.judge.findMany({
+          where: { hackathonId: hackathon.id },
+          select: { judgeCategories: { select: { categoryId: true } } },
+        }),
       ]);
 
-      const effectiveMinJudges = Math.min(
-        hackathon.min_judges_required,
-        Math.max(1, judgeCount),
-      );
+      const unrestrictedJudgeCount = judges.filter((j) => j.judgeCategories.length === 0).length;
+      const restrictedJudgeCountByCategory = new Map<string, number>();
+      for (const judge of judges) {
+        for (const jc of judge.judgeCategories) {
+          restrictedJudgeCountByCategory.set(
+            jc.categoryId,
+            (restrictedJudgeCountByCategory.get(jc.categoryId) ?? 0) + 1,
+          );
+        }
+      }
 
-      const rankAll = (subset: typeof participations) =>
+      const effectiveMinJudgesFor = (categoryId: string | null) => {
+        const eligibleJudges =
+          unrestrictedJudgeCount + (categoryId ? restrictedJudgeCountByCategory.get(categoryId) ?? 0 : 0);
+        return Math.min(hackathon.min_judges_required, Math.max(1, eligibleJudges));
+      };
+
+      const rankAll = (subset: typeof participations, categoryId: string | null) =>
         subset
           .map((participation) => {
             const { averageScore, completeJudges } = computeWeightedScore(
@@ -786,7 +815,7 @@ export const hackathonRouter = createTRPCRouter({
               ...participation,
               averageScore,
               totalScores: completeJudges,
-              isEligibleForRanking: completeJudges >= effectiveMinJudges,
+              isEligibleForRanking: completeJudges >= effectiveMinJudgesFor(categoryId),
             };
           })
           .filter((p) => p.isEligibleForRanking)
@@ -795,8 +824,6 @@ export const hackathonRouter = createTRPCRouter({
               ? b.averageScore - a.averageScore
               : b.totalScores - a.totalScores,
           );
-
-      const ranked = rankAll(participations);
 
       // Clear all existing winners first
       await ctx.prisma.participation.updateMany({
@@ -809,20 +836,31 @@ export const hackathonRouter = createTRPCRouter({
         },
       });
 
+      let totalEligibleSubmissions = 0;
+      let winnersCount = 0;
+
       if (hackathonCategories.length > 0) {
         // Mark one winner per category
         for (const category of hackathonCategories) {
-          const categoryWinner = ranked.find((p) => p.categoryId === category.id);
-          if (categoryWinner) {
+          const categoryRanked = rankAll(
+            participations.filter((p) => p.categoryId === category.id),
+            category.id,
+          );
+          totalEligibleSubmissions += categoryRanked.length;
+          if (categoryRanked.length > 0) {
+            winnersCount++;
             await ctx.prisma.participation.update({
-              where: { id: categoryWinner.id },
+              where: { id: categoryRanked[0].id },
               data: { is_winner: true, is_reviewed: true },
             });
           }
         }
       } else {
         // Global winner for hackathons with no categories
+        const ranked = rankAll(participations, null);
+        totalEligibleSubmissions = ranked.length;
         if (ranked.length > 0) {
+          winnersCount = 1;
           await ctx.prisma.participation.update({
             where: { id: ranked[0].id },
             data: { is_winner: true, is_reviewed: true },
@@ -842,8 +880,8 @@ export const hackathonRouter = createTRPCRouter({
 
       return {
         ...finishHackathon,
-        winnersCount: hackathonCategories.length > 0 ? hackathonCategories.length : (ranked.length > 0 ? 1 : 0),
-        totalEligibleSubmissions: ranked.length,
+        winnersCount,
+        totalEligibleSubmissions,
       };
     }),
 
