@@ -200,12 +200,17 @@ function AdminGenerateSlotsForm({
 
   const onSubmit = (data: AdminGenerateFormValues) => {
     const duration = parseInt(data.slotDurationMinutes, 10);
+    const startTime = new Date(`${data.date}T${data.startTime}`);
+    const endTime = new Date(`${data.date}T${data.endTime}`);
+    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+      toast.error("Invalid date or time");
+      return;
+    }
     generateMutation.mutate({
       hackathonId,
       mentorUserId,
-      date: data.date,
-      startTime: data.startTime,
-      endTime: data.endTime,
+      startTime,
+      endTime,
       slotDurationMinutes: duration,
       topic: data.topic || undefined,
     });
